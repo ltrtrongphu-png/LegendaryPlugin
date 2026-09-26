@@ -1,0 +1,1602 @@
+const fs = require('fs');
+const path = require('path');
+
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070a12">
+<meta name="description" content="LegendaryPlugin v1.5.1 — Premium Anti-Cheat, Anti-ESP, Optimization, Verification and Replay for Paper 1.21.4.">
+<title>LegendaryPlugin — Premium Protection for Paper 1.21.4</title>
+
+<style>
+:root {
+  --bg: #05070d;
+  --bg-2: #080c15;
+  --surface: rgba(15, 20, 32, .72);
+  --surface-solid: #0e1420;
+  --surface-2: #141c2b;
+
+  --blue: #4f8cff;
+  --blue-2: #2563eb;
+  --cyan: #22d3ee;
+  --green: #34d399;
+  --purple: #a78bfa;
+  --orange: #fbbf24;
+  --red: #fb7185;
+
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --dim: #64748b;
+
+  --border: rgba(255,255,255,.08);
+  --border-hover: rgba(255,255,255,.18);
+
+  --shadow: 0 25px 80px rgba(0,0,0,.45);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+               BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(59,130,246,.16), transparent 35%),
+    radial-gradient(circle at 90% 30%, rgba(34,211,238,.06), transparent 25%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  opacity: .3;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  left: 50%;
+  top: 20%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(37,99,235,.07);
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, calc(100% - 32px));
+  height: 62px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 18px;
+
+  background: rgba(8,12,20,.72);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  box-shadow: 0 15px 50px rgba(0,0,0,.25);
+
+  z-index: 999;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+.brand-logo-fallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  box-shadow: 0 0 25px rgba(59,130,246,.35);
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.brand span {
+  color: #fff;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  transition: .2s;
+}
+
+.nav-links a:hover {
+  color: white;
+  background: rgba(255,255,255,.06);
+}
+
+.nav-version {
+  font-size: 11px;
+  color: var(--green);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(52,211,153,.08);
+  border: 1px solid rgba(52,211,153,.18);
+}
+
+@media(max-width:700px) {
+  .nav-links {
+    display: none;
+  }
+}
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+  min-height: 920px;
+  padding: 150px 24px 100px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  text-align: center;
+}
+
+.hero-inner {
+  max-width: 950px;
+  position: relative;
+  z-index: 2;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 8px 14px;
+
+  border: 1px solid rgba(79,140,255,.2);
+  border-radius: 999px;
+
+  background: rgba(79,140,255,.07);
+
+  color: #9cc0ff;
+  font-size: 12px;
+  font-weight: 700;
+
+  margin-bottom: 28px;
+
+  box-shadow: 0 0 30px rgba(59,130,246,.08);
+}
+
+.eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+}
+
+.hero h1 {
+  font-size: clamp(3.4rem, 9vw, 7rem);
+  line-height: .95;
+  letter-spacing: -.065em;
+  font-weight: 900;
+
+  background: linear-gradient(
+    135deg,
+    #ffffff 15%,
+    #dbeafe 45%,
+    #7aa7ff 75%,
+    #c4b5fd
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  margin-bottom: 22px;
+}
+
+.hero-title-line {
+  display: block;
+}
+
+.hero-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  color: #a9c6ff;
+  font-size: 15px;
+  font-weight: 700;
+
+  margin-bottom: 25px;
+}
+
+.hero-version::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 12px var(--blue);
+}
+
+.hero-description {
+  max-width: 720px;
+  margin: auto;
+
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.hero-description strong {
+  color: #e2e8f0;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 34px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 12px 19px;
+
+  border-radius: 11px;
+
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+
+  transition: .2s;
+}
+
+.btn-primary {
+  color: white;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 10px 35px rgba(37,99,235,.25);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 45px rgba(37,99,235,.38);
+}
+
+.btn-secondary {
+  color: #cbd5e1;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  color: white;
+  border-color: var(--border-hover);
+  background: rgba(255,255,255,.07);
+}
+
+/* =========================
+   HERO ORBIT
+========================= */
+
+.hero-orbit {
+  position: absolute;
+  width: 720px;
+  height: 720px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: .65;
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(79,140,255,.07);
+  border-radius: 50%;
+}
+
+.orbit:nth-child(2) {
+  inset: 80px;
+  border-color: rgba(167,139,250,.06);
+}
+
+.orbit:nth-child(3) {
+  inset: 170px;
+  border-color: rgba(34,211,238,.06);
+}
+
+.orbit-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 170px;
+  height: 170px;
+  transform: translate(-50%,-50%);
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(59,130,246,.18),
+    rgba(59,130,246,.02) 70%,
+    transparent
+  );
+
+  filter: blur(2px);
+}
+
+/* =========================
+   STATS
+========================= */
+
+.stats {
+  max-width: 1050px;
+  margin: -70px auto 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 5;
+}
+
+.stats-box {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+
+  background: rgba(14,20,32,.82);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  backdrop-filter: blur(20px);
+
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.stat {
+  padding: 27px 15px;
+  text-align: center;
+  position: relative;
+}
+
+.stat:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: var(--border);
+}
+
+.stat-number {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.stat-label {
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+@media(max-width:650px) {
+  .stats-box {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .stat:nth-child(2)::after {
+    display: none;
+  }
+
+  .stat:nth-child(-n+2) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* =========================
+   SECTIONS
+========================= */
+
+section {
+  max-width: 1120px;
+  margin: auto;
+  padding: 110px 22px;
+}
+
+.section-head {
+  margin-bottom: 42px;
+}
+
+.section-kicker {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  margin-bottom: 9px;
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+}
+
+.section-sub {
+  max-width: 650px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* =========================
+   MODULES
+========================= */
+
+.modules {
+  display: grid;
+  grid-template-columns: repeat(6,1fr);
+  gap: 15px;
+}
+
+.card {
+  grid-column: span 2;
+
+  position: relative;
+
+  padding: 27px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.055),
+      rgba(255,255,255,.018)
+    );
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  transition:
+    transform .25s,
+    border-color .25s,
+    box-shadow .25s;
+}
+
+.card:nth-child(4),
+.card:nth-child(5) {
+  grid-column: span 3;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  top: -80px;
+  right: -70px;
+  background: var(--card-glow, rgba(79,140,255,.12));
+  filter: blur(45px);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: var(--border-hover);
+  box-shadow: 0 25px 60px rgba(0,0,0,.3);
+}
+
+.card-icon {
+  width: 46px;
+  height: 46px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 13px;
+
+  font-size: 20px;
+
+  margin-bottom: 20px;
+
+  background: rgba(79,140,255,.1);
+  border: 1px solid rgba(79,140,255,.12);
+}
+
+.card:nth-child(1) {
+  --card-glow: rgba(239,68,68,.15);
+}
+
+.card:nth-child(2) {
+  --card-glow: rgba(59,130,246,.15);
+}
+
+.card:nth-child(3) {
+  --card-glow: rgba(52,211,153,.15);
+}
+
+.card:nth-child(4) {
+  --card-glow: rgba(251,191,36,.15);
+}
+
+.card:nth-child(5) {
+  --card-glow: rgba(167,139,250,.15);
+}
+
+.card h3 {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.card > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.card ul {
+  list-style: none;
+}
+
+.card li {
+  color: #aebbd0;
+  font-size: 12px;
+  padding: 5px 0;
+  display: flex;
+  gap: 8px;
+}
+
+.card li::before {
+  content: "✓";
+  color: var(--green);
+  font-weight: 900;
+}
+
+/* =========================
+   CHECKS
+========================= */
+
+.checks-wrapper {
+  padding: 24px;
+
+  background: rgba(12,17,27,.75);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  box-shadow: var(--shadow);
+}
+
+.check-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  color: white;
+
+  border-radius: 10px;
+  padding: 11px 13px;
+
+  outline: none;
+}
+
+.search:focus {
+  border-color: rgba(79,140,255,.45);
+  box-shadow: 0 0 0 3px rgba(79,140,255,.08);
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  border-radius: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.filter.active,
+.filter:hover {
+  color: white;
+  background: rgba(79,140,255,.12);
+  border-color: rgba(79,140,255,.25);
+}
+
+.checks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+  gap: 8px;
+}
+
+.check-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-height: 46px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: rgba(255,255,255,.025);
+
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: .2s;
+}
+
+.check-item:hover,
+.check-item.active {
+  background: rgba(79,140,255,.08);
+  border-color: rgba(79,140,255,.25);
+  color: white;
+}
+
+.check-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(52,211,153,.45);
+}
+
+.check-tip {
+  position: absolute;
+
+  width: 260px;
+
+  left: 50%;
+  bottom: calc(100% + 10px);
+
+  transform: translateX(-50%) translateY(5px);
+
+  padding: 14px;
+
+  background: #151d2c;
+  border: 1px solid var(--border-hover);
+  border-radius: 12px;
+
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+
+  box-shadow: 0 20px 50px rgba(0,0,0,.55);
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: .2s;
+  z-index: 20;
+}
+
+.check-item:hover .check-tip,
+.check-item.active .check-tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tip-title {
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.tip-cat {
+  color: var(--blue);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
+
+/* =========================
+   CHANGELOG
+========================= */
+
+.changelog {
+  position: relative;
+  padding-left: 30px;
+}
+
+.changelog::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(
+    var(--blue),
+    rgba(79,140,255,.08)
+  );
+}
+
+.changelog-entry {
+  position: relative;
+  padding: 0 0 45px 28px;
+}
+
+.changelog-entry::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 6px;
+
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow:
+    0 0 0 5px rgba(79,140,255,.08),
+    0 0 20px rgba(79,140,255,.5);
+}
+
+.version-badge {
+  display: inline-flex;
+  padding: 5px 9px;
+
+  border-radius: 7px;
+
+  background: rgba(79,140,255,.1);
+  border: 1px solid rgba(79,140,255,.15);
+
+  color: #9ec0ff;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.date {
+  color: var(--dim);
+  font-size: 11px;
+  margin: 7px 0 15px;
+}
+
+.changelog-entry ul {
+  list-style: none;
+}
+
+.changelog-entry li {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 5px 0;
+}
+
+.changelog-entry li::before {
+  content: "+";
+  color: var(--green);
+  font-weight: 900;
+  margin-right: 9px;
+}
+
+/* =========================
+   CTA
+========================= */
+
+.cta {
+  max-width: 1050px;
+  margin: 30px auto 100px;
+  padding: 0 22px;
+}
+
+.cta-box {
+  position: relative;
+  overflow: hidden;
+
+  padding: 55px 35px;
+
+  text-align: center;
+
+  border: 1px solid rgba(79,140,255,.18);
+  border-radius: 24px;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(59,130,246,.16),
+      transparent 60%
+    ),
+    rgba(13,18,29,.8);
+
+  box-shadow: var(--shadow);
+}
+
+.cta-box h2 {
+  font-size: clamp(2rem,5vw,3rem);
+  letter-spacing: -.045em;
+  margin-bottom: 10px;
+}
+
+.cta-box p {
+  max-width: 600px;
+  margin: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer {
+  padding: 35px 20px 45px;
+
+  border-top: 1px solid var(--border);
+
+  text-align: center;
+
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.footer strong {
+  color: #aab7cb;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:850px) {
+  .modules {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .card,
+  .card:nth-child(4),
+  .card:nth-child(5) {
+    grid-column: span 1;
+  }
+
+  .hero {
+    min-height: 800px;
+  }
+
+  .hero-orbit {
+    width: 500px;
+    height: 500px;
+  }
+}
+
+@media(max-width:600px) {
+  section {
+    padding: 80px 16px;
+  }
+
+  .hero {
+    padding: 130px 18px 80px;
+  }
+
+  .hero h1 {
+    font-size: 3.5rem;
+  }
+
+  .hero-description {
+    font-size: 15px;
+  }
+
+  .modules {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .card:nth-child(4),
+  .card:nth-child(5) {
+    grid-column: span 1;
+  }
+
+  .checks-wrapper {
+    padding: 14px;
+  }
+
+  .check-tip {
+    width: 220px;
+  }
+
+  .cta-box {
+    padding: 40px 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<nav class="navbar">
+  <div class="brand">
+    <img class="brand-logo" src="LegendaryPlugin-Logo.png" alt="LegendaryPlugin" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="brand-logo-fallback" style="display:none">L</div>
+    <span>LegendaryPlugin</span>
+  </div>
+
+  <div class="nav-links">
+    <a href="#modules">Modules</a>
+    <a href="#checks">Checks</a>
+    <a href="#changelog">Changelog</a>
+  </div>
+
+  <div class="nav-version">v1.5.1</div>
+</nav>
+
+
+<!-- HERO -->
+
+<header class="hero">
+
+  <div class="hero-orbit">
+    <div class="orbit"></div>
+    <div class="orbit"></div>
+    <div class="orbit"></div>
+    <div class="orbit-core"></div>
+  </div>
+
+  <div class="hero-inner">
+
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      Paper 1.21.4 Compatible
+    </div>
+
+    <h1>
+      <span class="hero-title-line">Legendary</span>
+      <span class="hero-title-line">Plugin</span>
+    </h1>
+
+    <div class="hero-version">
+      v1.5.1 — Premium Pro Max
+    </div>
+
+    <p class="hero-description">
+      A unified protection platform combining
+      <strong>Anti-Cheat</strong>,
+      <strong>Anti-ESP</strong>,
+      <strong>Optimization</strong>,
+      <strong>Verification</strong> and
+      <strong>Replay</strong>
+      into one modular plugin.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#modules">
+        Explore Modules →
+      </a>
+
+      <a class="btn btn-secondary" href="#checks">
+        View 46 Checks
+      </a>
+    </div>
+
+  </div>
+</header>
+
+
+<!-- STATS -->
+
+<div class="stats">
+  <div class="stats-box">
+
+    <div class="stat">
+      <div class="stat-number">46</div>
+      <div class="stat-label">Anti-Cheat Checks</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">5</div>
+      <div class="stat-label">Core Modules</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">135</div>
+      <div class="stat-label">Source Files</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">1705</div>
+      <div class="stat-label">Tests Passed</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- MODULES -->
+
+<section id="modules">
+
+  <div class="section-head">
+    <div class="section-kicker">Architecture</div>
+    <div class="section-title">Everything in one plugin.</div>
+    <div class="section-sub">
+      Five powerful modules designed to work together while remaining independently configurable.
+    </div>
+  </div>
+
+  <div class="modules">
+
+    <div class="card">
+      <div class="card-icon">🛡️</div>
+      <h3>Anti-Cheat</h3>
+
+      <p>
+        46 detection checks with violation escalation,
+        trust scoring, threat scoring and TPS-adaptive protection.
+      </p>
+
+      <ul>
+        <li>KillAura, AimAssist, ImpossibleHit</li>
+        <li>Movement, NoFall, NoClip, Step, Spider</li>
+        <li>Timer, Blink, Rotation, Scaffold</li>
+        <li>Jesus, Criticals, BowSpam, Xray</li>
+        <li>Player trust sensitivity</li>
+        <li>Composite threat score 0–100</li>
+        <li>Automatic threat actions</li>
+        <li>TPS-adaptive sensitivity</li>
+      </ul>
+    </div>
+
+
+    <div class="card">
+      <div class="card-icon">👁️</div>
+      <h3>Anti-ESP</h3>
+
+      <p>
+        Protects hidden information and reduces
+        unfair client-side visibility advantages.
+      </p>
+
+      <ul>
+        <li>Block obfuscation</li>
+        <li>Player visibility manager</li>
+        <li>View distance optimization</li>
+        <li>Anti-free-cam detection</li>
+        <li>Paper Anti-Xray advisory</li>
+      </ul>
+    </div>
+
+
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Optimization</h3>
+
+      <p>
+        TPS-aware server optimization designed
+        to reduce unnecessary entity and redstone load.
+      </p>
+
+      <ul>
+        <li>Entity sweep & merge</li>
+        <li>Mob cap enforcement</li>
+        <li>Hopper throttling</li>
+        <li>Redstone throttling</li>
+        <li>Join ramp optimizer</li>
+        <li>Chunk health reporter</li>
+      </ul>
+    </div>
+
+
+    <div class="card">
+      <div class="card-icon">🔐</div>
+      <h3>Verification</h3>
+
+      <p>
+        Join-limbo protection designed to slow down
+        automated bots before they reach the server.
+      </p>
+
+      <ul>
+        <li>Move verification</li>
+        <li>Click-block verification</li>
+        <li>IP rate limiting</li>
+        <li>Void limbo generator</li>
+        <li>Automatic verification flow</li>
+      </ul>
+    </div>
+
+
+    <div class="card">
+      <div class="card-icon">🎬</div>
+      <h3>Replay</h3>
+
+      <p>
+        Rolling movement buffers allow staff to
+        review suspicious gameplay after a violation.
+      </p>
+
+      <ul>
+        <li>Automatic flag recording</li>
+        <li>Staff playback manager</li>
+        <li>Snapshots & clips</li>
+        <li>Per-player clip history</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- CHECKS -->
+
+<section id="checks">
+
+  <div class="section-head">
+    <div class="section-kicker">Detection Engine</div>
+    <div class="section-title">46 Anti-Cheat Checks.</div>
+    <div class="section-sub">
+      Search, filter and inspect every detection module.
+      Each check uses TPS compensation and Geyser exemptions where applicable.
+    </div>
+  </div>
+
+  <div class="checks-wrapper">
+
+    <div class="check-toolbar">
+
+      <input
+        id="search"
+        class="search"
+        placeholder="Search checks..."
+        autocomplete="off"
+      >
+
+      <div class="filters" id="filters"></div>
+
+    </div>
+
+    <div class="checks-grid" id="checksGrid"></div>
+
+  </div>
+</section>
+
+
+<!-- CHANGELOG -->
+
+<section id="changelog">
+
+  <div class="section-head">
+    <div class="section-kicker">Release History</div>
+    <div class="section-title">Changelog.</div>
+    <div class="section-sub">
+      Recent development milestones and stability improvements.
+    </div>
+  </div>
+
+  <div class="changelog">
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.5.1</span>
+      <div class="date">September 26, 2026</div>
+
+      <ul>
+        <li>Full codebase audit: 28 runtime bug fixes across all 5 modules</li>
+        <li>Fixed cross-world distanceSquared crashes</li>
+        <li>Fixed zero-vector normalize crashes in AimAssist and ImpossibleHit</li>
+        <li>Fixed cross-world distance crashes in multiple checks</li>
+        <li>Fixed ViolationContext unloaded-world NPE</li>
+        <li>Fixed ShulkerNesting null hand item NPE</li>
+        <li>Fixed NoSlow unloaded-world NPE</li>
+        <li>Fixed DatabaseManager shutdown race condition</li>
+        <li>Fixed temporary bypass security issue</li>
+        <li>Fixed ModuleManager casing inconsistency</li>
+        <li>Fixed malformed UUID handling</li>
+        <li>Fixed DisablerCheck PONG packet NPE</li>
+        <li>Fixed VerificationManager cross-world issues</li>
+        <li>Fixed ReplayPlaybackManager CME risk</li>
+        <li>Fixed ProtectionRules removed-entity crash</li>
+        <li>Fixed OptimizationModule thread-safety issue</li>
+        <li>Fixed RateLimiter non-atomic window reset</li>
+        <li>1705 simulation scenarios — 100% accuracy</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.5.0</span>
+      <div class="date">September 25, 2026</div>
+
+      <ul>
+        <li>Composite threat scoring from 0–100</li>
+        <li>Automatic kick at threat score ≥60</li>
+        <li>Automatic ban at threat score ≥85</li>
+        <li>Live /legendaryac threats dashboard</li>
+        <li>TPS-adaptive sensitivity</li>
+        <li>Lag spike protection below 10 TPS</li>
+        <li>Threat score added to player profiles</li>
+        <li>1705 simulation scenarios</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.4.0</span>
+      <div class="date">September 24, 2026</div>
+
+      <ul>
+        <li>10 new Anti-Cheat checks</li>
+        <li>FastPlace upgraded with TPS compensation</li>
+        <li>Phase detection improvements</li>
+        <li>Glide detection improvements</li>
+        <li>Strafe detection improvements</li>
+        <li>AntiHunger monitoring system</li>
+        <li>Rotation snap detection fix</li>
+        <li>NoFall Slow Falling exemption</li>
+        <li>129 simulation scenarios — 100% pass rate</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.3.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>WatchManager for detailed staff monitoring</li>
+        <li>VanillaPhysics potion multipliers</li>
+        <li>GUI hub with Modules, Players and Checks</li>
+        <li>BungeeCord / Velocity ban synchronization</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.2.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>Geyser / Bedrock exemption</li>
+        <li>MythicMobs protection</li>
+        <li>Six new Anti-Cheat checks</li>
+        <li>Shared BlockWhitelist</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry">
+      <span class="version-badge">v1.1.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>DatabaseManager violation persistence</li>
+        <li>Paper Anti-Xray advisory</li>
+        <li>ElytraFlight and InstaBreak</li>
+        <li>EntitySweepTask</li>
+        <li>AntiFreeCam violation pipeline</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- CTA -->
+
+<div class="cta">
+
+  <div class="cta-box">
+
+    <h2>Built for serious servers.</h2>
+
+    <p>
+      One plugin. Five modules. 46 checks.
+      Designed for Paper 1.21.4 with performance and stability in mind.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#modules">
+        Explore LegendaryPlugin →
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- FOOTER -->
+
+<footer class="footer">
+  <strong>LegendaryPlugin v1.5.1</strong>
+  &nbsp;·&nbsp;
+  Paper 1.21.4
+  &nbsp;·&nbsp;
+  MIT License
+  <br><br>
+  Anti-Cheat · Anti-ESP · Optimization · Verification · Replay
+</footer>
+
+
+<script>
+
+const checks = [
+  {name:'KillAura',cat:'Combat',desc:'Detects automated attack systems that lock onto targets through walls or with impossible precision.'},
+  {name:'AimAssist',cat:'Combat',desc:'Flags suspiciously smooth or perfectly tracked aim patterns.'},
+  {name:'ImpossibleHit',cat:'Combat',desc:'Catches hits from angles or distances that vanilla mechanics do not allow.'},
+  {name:'Scaffold',cat:'Building',desc:'Detects automated block placement systems.'},
+  {name:'Spider',cat:'Movement',desc:'Flags players climbing walls without legitimate climbing surfaces.'},
+  {name:'AutoTotem',cat:'Inventory',desc:'Detects instant totem swaps.'},
+  {name:'AutoArmor',cat:'Inventory',desc:'Catches automated armor equipping.'},
+  {name:'BlockReach',cat:'Building',desc:'Flags block interactions beyond vanilla reach.'},
+  {name:'ContainerReach',cat:'Building',desc:'Detects container access from excessive distances.'},
+  {name:'FastUse',cat:'Action',desc:'Catches item usage speeds exceeding vanilla cooldowns.'},
+  {name:'FastInteract',cat:'Action',desc:'Flags interaction rates faster than vanilla allows.'},
+  {name:'FastBreak',cat:'Building',desc:'Detects abnormal block breaking speeds.'},
+  {name:'InventoryAction',cat:'Inventory',desc:'Catches suspicious inventory manipulations.'},
+  {name:'Knockback',cat:'Combat',desc:'Flags reduced or impossible knockback behavior.'},
+  {name:'Movement',cat:'Movement',desc:'Detects general movement anomalies.'},
+  {name:'NoClip',cat:'Movement',desc:'Catches players moving through solid blocks.'},
+  {name:'NoFall',cat:'Movement',desc:'Flags players avoiding fall damage.'},
+  {name:'NoSlow',cat:'Movement',desc:'Detects normal movement while using slowing items.'},
+  {name:'NoSwing',cat:'Combat',desc:'Catches attacks without required swing animation.'},
+  {name:'Rotation',cat:'Combat',desc:'Flags impossible rotation patterns.'},
+  {name:'Step',cat:'Movement',desc:'Detects abnormal step height.'},
+  {name:'Timer',cat:'Packet',desc:'Catches packet timing manipulation.'},
+  {name:'Xray',cat:'World',desc:'Detects suspicious resource visibility behavior.'},
+  {name:'ElytraFlight',cat:'Movement',desc:'Flags abnormal elytra flight patterns.'},
+  {name:'InstaBreak',cat:'Building',desc:'Catches instant block breaking.'},
+  {name:'Jesus',cat:'Movement',desc:'Detects walking on water or lava.'},
+  {name:'Surround',cat:'Building',desc:'Flags automated surround block placement.'},
+  {name:'AutoTool',cat:'Inventory',desc:'Catches instant automatic tool switching.'},
+  {name:'ShulkerNesting',cat:'Inventory',desc:'Detects suspicious shulker interactions.'},
+  {name:'ChestAura',cat:'Combat',desc:'Flags automated container targeting.'},
+  {name:'Criticals',cat:'Combat',desc:'Catches invalid critical hits.'},
+  {name:'FastClimb',cat:'Movement',desc:'Detects abnormal ladder and vine climbing.'},
+  {name:'JumpHeight',cat:'Movement',desc:'Flags abnormal jump height.'},
+  {name:'Blink',cat:'Packet',desc:'Catches packet buffering movement exploits.'},
+  {name:'GUIMove',cat:'Inventory',desc:'Detects movement while inventory screens are open.'},
+  {name:'BowSpam',cat:'Combat',desc:'Flags abnormal bow firing rates.'},
+  {name:'Velocity',cat:'Combat',desc:'Catches knockback velocity manipulation.'},
+  {name:'FlyBoost',cat:'Movement',desc:'Detects unauthorized flight boosts.'},
+  {name:'BadPackets',cat:'Packet',desc:'Flags malformed or impossible packets.'},
+  {name:'FastEat',cat:'Action',desc:'Catches abnormal food consumption speed.'},
+  {name:'AntiVoid',cat:'Movement',desc:'Detects void-death avoidance exploits.'},
+  {name:'FastPlace',cat:'Building',desc:'Flags abnormal block placement speeds.'},
+  {name:'Phase',cat:'Movement',desc:'Catches clipping through blocks.'},
+  {name:'Glide',cat:'Movement',desc:'Detects abnormal falling behavior.'},
+  {name:'Strafe',cat:'Movement',desc:'Flags unnatural sideways movement.'},
+  {name:'AntiHunger',cat:'Action',desc:'Catches suspicious hunger depletion manipulation.'}
+];
+
+const grid = document.getElementById('checksGrid');
+const search = document.getElementById('search');
+const filters = document.getElementById('filters');
+
+const categories = [
+  'All',
+  ...new Set(checks.map(c => c.cat))
+];
+
+let activeCategory = 'All';
+
+categories.forEach(cat => {
+
+  const button = document.createElement('button');
+
+  button.className = 'filter' + (
+    cat === 'All' ? ' active' : ''
+  );
+
+  button.textContent = cat;
+
+  button.onclick = () => {
+
+    activeCategory = cat;
+
+    document
+      .querySelectorAll('.filter')
+      .forEach(x => x.classList.remove('active'));
+
+    button.classList.add('active');
+
+    render();
+  };
+
+  filters.appendChild(button);
+});
+
+
+function render() {
+
+  const query = search.value.toLowerCase().trim();
+
+  grid.innerHTML = '';
+
+  const filtered = checks.filter(c => {
+
+    const matchesSearch =
+      c.name.toLowerCase().includes(query) ||
+      c.cat.toLowerCase().includes(query) ||
+      c.desc.toLowerCase().includes(query);
+
+    const matchesCategory =
+      activeCategory === 'All' ||
+      c.cat === activeCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  filtered.forEach(c => {
+
+    const el = document.createElement('div');
+
+    el.className = 'check-item';
+
+    el.innerHTML =
+      '<span class="check-dot"></span>' +
+      '<span>' + c.name + '</span>' +
+      '<div class="check-tip">' +
+        '<div class="tip-title">' + c.name + '</div>' +
+        '<div class="tip-cat">' + c.cat + '</div>' +
+        c.desc +
+      '</div>';
+
+    el.addEventListener('click', () => {
+      el.classList.toggle('active');
+    });
+
+    grid.appendChild(el);
+  });
+
+}
+
+
+search.addEventListener('input', render);
+
+render();
+
+
+/* Mobile tooltip */
+
+document.addEventListener('click', event => {
+
+  if (!event.target.closest('.check-item')) {
+
+    document
+      .querySelectorAll('.check-item.active')
+      .forEach(el => el.classList.remove('active'));
+
+  }
+
+});
+
+
+/* Small scroll effect for navbar */
+
+const navbar = document.querySelector('.navbar');
+
+window.addEventListener('scroll', () => {
+
+  if (window.scrollY > 40) {
+
+    navbar.style.background = 'rgba(6,10,17,.9)';
+    navbar.style.borderColor = 'rgba(255,255,255,.12)';
+
+  } else {
+
+    navbar.style.background = 'rgba(8,12,20,.72)';
+    navbar.style.borderColor = 'rgba(255,255,255,.08)';
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>
+`;
+
+const dist = path.join(__dirname, 'dist');
+
+if (!fs.existsSync(dist)) {
+  fs.mkdirSync(dist, { recursive: true });
+}
+
+fs.writeFileSync(
+  path.join(dist, 'index.html'),
+  html,
+  'utf8'
+);
+
+console.log('LegendaryPlugin landing page generated to dist/index.html');
+

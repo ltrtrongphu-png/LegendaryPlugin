@@ -1,0 +1,67 @@
+name: LegendaryPlugin
+version: '${project.version}'
+main: com.legendary.plugin.LegendaryPlugin
+api-version: '1.21'
+author: LegendaryNetworkDev
+description: >
+  Unified anti-cheat, anti-X-ray/ESP protection, server optimization and
+  join-verification platform. Merges AntiESPUltimate, SmartOptimizer and
+  BaB into one modular plugin.
+website: https://example.com/legendary-plugin
+
+# All third-party integrations are optional (soft-depend) and every module
+# gracefully disables itself if the dependency is missing.
+softdepend: [ProtocolLib, PlaceholderAPI]
+load: POSTWORLD
+
+commands:
+  legendary:
+    description: Main LegendaryPlugin command - status, module control, GUI, reports.
+    aliases: [lp, legend]
+    permission: legendary.admin
+    usage: |
+      /<command> help
+      /<command> status
+      /<command> module <list|enable|disable|reload> [module]
+      /<command> gui
+      /<command> simulate <mild|moderate|severe|normal>
+      /<command> topchunks [world] [limit]
+      /<command> history
+      /<command> report
+  legendaryac:
+    description: Anti-cheat controls (violation levels, trust, exemptions, replay, threat dashboard).
+    aliases: [lac, bab]
+    permission: legendary.anticheat.admin
+    usage: |
+      /<command> vl <player> [check]
+      /<command> exempt <player>
+      /<command> reset <player> [check]
+      /<command> checkall [player]
+      /<command> history <player> [limit]
+      /<command> watch <player>
+      /<command> trust <player> [set <value>|reset]
+      /<command> replay <list|watch|stop> [player] [index]
+      /<command> profile <player>
+      /<command> threats
+      /<command> bypass <player> <seconds|revoke>
+      /<command> bypass-audit [player]
+
+permissions:
+  legendary.admin:
+    description: Full access to every LegendaryPlugin module and command.
+    default: op
+  legendary.anticheat.admin:
+    description: Access to anti-cheat management commands and alerts.
+    default: op
+  legendary.anticheat.alerts:
+    description: Receive real-time anti-cheat violation alerts.
+    default: op
+  legendary.esp.bypass:
+    description: Bypass ESP protection / view-distance restrictions (staff, spectators).
+    default: op
+  legendary.verification.bypass:
+    description: Skip the join-verification limbo stage.
+    default: op
+  legendary.raidalert.bypass:
+    description: Exempt from raid-alert monitoring (trusted players).
+    default: false

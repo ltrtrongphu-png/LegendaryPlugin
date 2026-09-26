@@ -1,0 +1,328 @@
+# ============================================================
+#  LegendaryPlugin - unified configuration
+#  (merged from AntiESPUltimate + SmartOptimizer + BaB)
+# ============================================================
+debug: false
+
+general:
+  spawn-on-join:
+    # Standalone "always teleport to spawn on join" - only takes effect if the verification
+    # module below is off (when verification is on, it already handles this the same way
+    # once a player passes the check). See also verification.always-spawn-on-join for the
+    # bypass-permission case while verification IS on.
+    enabled: false
+    world: ""    # empty = default world
+    # x: 0.5
+    # y: 65.0
+    # z: 0.5
+
+# ---- Module master switches (read by ModuleManager) ----------
+modules:
+  esp: true
+  optimization: true
+  anticheat: true
+  verification: true
+  replay: true
+
+# ---- ESP / Anti-X-ray protection ------------------------------
+esp:
+  player-visibility:
+    enabled: true
+    check-interval-ticks: 10
+    max-distance: 48.0
+    min-distance: 4.0
+    blocking-threshold: 0.55
+    team-exemption: true
+    # Above this many players online at once, skip the real raycast (expensive: does a world
+    # block trace per pair) and fall back to distance-only hiding, to protect TPS at scale.
+    max-players-for-raycast: 40
+  block-obfuscation:
+    enabled: true
+    reveal-distance: 6.0
+    reveal-check-interval-ticks: 5
+    materials: [DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE, ANCIENT_DEBRIS, EMERALD_ORE, DEEPSLATE_EMERALD_ORE]
+    # Defends against "StorageESP" (highlights chests/containers through walls) the same way
+    # as ore above. Off by default - see BlockObfuscationManager's class doc for the tradeoff.
+    hide-storage-blocks: false
+    storage-materials: [CHEST, TRAPPED_CHEST, BARREL, SHULKER_BOX, ENDER_CHEST]
+    # Logs actionable guidance (console) if Paper's own built-in, chunk-level Anti-Xray
+    # (config/paper-world-defaults.yml -> anticheat.anti-xray) is off - that engine covers
+    # freshly-loaded chunks, which this plugin's packet patching alone cannot. See README.
+    paper-native-anti-xray-advisory: true
+  view-distance:
+    enabled: true
+    max-view-distance: 8
+  anti-freecam:
+    enabled: true
+    y-threshold: -64
+    duration-ticks: 100
+  hidden-mode:
+    enter-hide-y: -512
+    exit-hide-y: -500
+
+# ---- Server optimization (SmartOptimizer) ---------------------
+optimization:
+  enabled: true
+  thresholds:
+    mild-tps: 19.3
+    moderate-tps: 17.0
+    severe-tps: 14.0
+  check-interval-seconds: 5
+  base-view-distance: -1
+  base-simulation-distance: -1
+  notify-admins-on-level-change: true
+  modules:
+    view-distance: true
+    mob-spawn-limit: true
+    item-merge: true
+    xp-orb-merge: true
+    hopper-throttle: true
+    redstone-limiter: true
+    mob-cap: true
+    falling-block-limit: true
+    armor-stand-limit: true
+    clear-entities: true
+    join-ramp: true
+  auto-clear:
+    # Independent of TPS/lag level - clears loose items/mobs on a fixed timer.
+    enabled: true
+    interval-seconds: 300
+    warn-seconds-before: 10
+  redstone-limiter:
+    # Smoothly throttles redstone update rate per-component instead of hard-freezing a whole
+    # chunk. 1.0 = no throttling (vanilla speed); 0.65 = ~65% of normal update rate. Only
+    # components updating faster than this are affected - normal circuits are left alone.
+    speed-multiplier: 0.65
+  item-merge:
+    check-interval-seconds: 3
+    skip-named-or-enchanted: true
+  history:
+    file-name: tps-history.csv
+    max-lines: 5000
+  discord:
+    enabled: false
+    webhook-url: ""
+
+# ---- Anti-cheat (BaB) ------------------------------------------
+anticheat:
+  enabled: true
+  # Check profile preset: lenient | balanced | strict
+  # Lenient: reduces flag weights by 40%, disables noisy checks (timer, rotation, blink, guimove)
+  # Balanced: default sensitivity, all checks active
+  # Strict: amplifies flag weights by 40%, enables extra checks (noswing, fastinteract, bowspam, chestaura)
+  profile: balanced
+  alert:
+    permission: legendary.anticheat.alerts
+    format: "<gray>[<gold>AC<gray>] <yellow><player> <gray>failed <white><check> <gray>(VL <red><vl>/<threshold>)"
+    ban-broadcast-format: "<red><player> <gray>has been banned for <white><reason>"
+    # Minimum gap between two alert NOTICES for the same player+check. Violations are still
+    # counted/logged to the database and escalated every single time regardless of this value -
+    # this only throttles how often staff chat / the debug console line repeats itself.
+    cooldown-ms: 3000
+    # Default VL threshold shown in alert messages when no per-check threshold is configured.
+    default-threshold: 10.0
+  violations:
+    # VL does not decay over time - violations persist until manually reset or player relogs.
+    # This prevents cheaters from waiting out their violation record.
+  trust:
+    # Player trust scoring - premium feature that adjusts detection sensitivity
+    # based on long-term behaviour. Trusted players get leniency, new/suspicious
+    # accounts get amplified scrutiny.
+    starting: 50.0
+    gain-per-hour: 2.0
+    loss-per-flag: 5.0
+    min: 0.0
+    max: 100.0
+    check-interval-seconds: 60
+  ban:
+    require-plugin: false
+    plugin-name: LightBans
+    command-template: "ban %player% %duration% %reason%"
+    default-duration: 30d
+    reason-template: "AutoBan: %check% (VL %vl%)"
+  checks:
+    killaura: { enabled: true, max-reach: 4.2, multiaura-enabled: true, multiaura-min-interval-ms: 60,
+      autoclicker-enabled: true, autoclicker-max-cps: 18, autoclicker-sample-window-ms: 2000,
+      autoclicker-timing-enabled: true, autoclicker-timing-min-samples: 10, autoclicker-timing-min-cps: 12.0 }
+    aimassist: { enabled: true, min-snap-degrees: 40.0, min-pitch-snap-degrees: 25.0, alignment-threshold: 0.97, exempt-bedrock: true }
+    scaffold: { enabled: true, min-interval-ms: 45 }
+    spider: { enabled: true, natural-jump-ticks: 10, required-ticks: 6 }
+    autototem: { enabled: true, min-refill-ms: 80 }
+    autoarmor: { enabled: true, min-interval-ms: 150, required-count: 3 }
+    blockreach: { enabled: true, max-reach: 6.0 }
+    containerreach: { enabled: true, max-reach: 6.0 }
+    fastuse: { enabled: true, min-interval-ms: 400 }
+    fastinteract: { enabled: true, window-ms: 1000, max-per-window: 10 }
+    fastbreak: { enabled: true, min-interval-ms: 30 }
+    inventoryaction: { enabled: true, grace-ms: 150 }
+    knockback: { enabled: true, delay-ticks: 10, min-velocity: 0.15 }
+    movement: { speed-enabled: true, flight-enabled: true, max-speed-multiplier: 1.3, vertical-tolerance: 0.08, max-airborne-ticks: 20, exempt-bedrock: true }
+    noclip: { enabled: true, required-ticks: 4 }
+    nofall: { enabled: true, min-fall-distance: 3.0, exempt-bedrock: true }
+    noslow: { enabled: true, max-slowed-speed: 0.16, exempt-bedrock: true }
+    noswing: { enabled: true, max-gap-ms: 200 }
+    rotation: { enabled: true, uniformity-enabled: true, snap-enabled: true, min-avg-deg-per-tick: 0.15, max-cv: 0.08, max-rotation-per-tick: 180.0, exempt-bedrock: true }
+    step: { enabled: true, min-step: 0.61, required-streak: 3, exempt-bedrock: true }
+    timer: { enabled: true, max-moves: 24 }
+    impossiblehit: { enabled: true, max-negative-dot: -0.05, max-fov-degrees: 100.0 }
+    xray: { enabled: true, min-blocks-for-ratio: 40, hidden-ore-ratio: 0.03, block-reset-interval: 500, alert-permission: legendary.anticheat.alerts }
+    elytraflight: { enabled: true, max-horizontal-speed: 2.4, max-sustained-climb-per-tick: 0.35,
+      required-streak: 8, firework-grace-ms: 3000, exempt-bedrock: true }
+    instabreak: { enabled: true, weight: 5.0, escalation: "alert,ban",
+      materials: [BEDROCK, BARRIER, COMMAND_BLOCK, CHAIN_COMMAND_BLOCK, REPEATING_COMMAND_BLOCK,
+                  STRUCTURE_BLOCK, STRUCTURE_VOID, JIGSAW, END_GATEWAY, END_PORTAL_FRAME, LIGHT] }
+    freecam: { escalation: "alert,alert,kick,ban" }  # esp.anti-freecam controls detection timing; this controls what happens once flagged
+    invalidpacket: { enabled: true }
+    jesus: { enabled: true, required-ticks: 4, exempt-bedrock: true }
+    surround: { enabled: true, max-per-second: 6, required-buffer: 3 }
+    autotool: { enabled: true, min-interval-ms: 100, required-streak: 3 }
+    shulkernesting: { enabled: true }
+    chestaura: { enabled: true, raycast-distance: 6.0, required-buffer: 2, exempt-bedrock: true }
+    criticals: { enabled: true }
+    fastclimb: { enabled: true, max-climb-speed: 0.15, required-streak: 4 }
+    jumpheight: { enabled: true, max-jump-height: 1.3 }
+    blink: { enabled: true, min-gap-ms: 400, max-blocks-per-second: 12.0 }
+    guimove: { enabled: true, max-distance-while-open: 2.0 }
+    bowspam: { enabled: true, min-interval-ms: 500, required-streak: 3 }
+    packetflood: { enabled: true, max-per-second: 400 }
+    velocity: { enabled: true, min-knockback-magnitude: 0.12, required-streak: 3 }
+    flyboost: { enabled: true, max-air-speed: 0.55, required-streak: 4, exempt-bedrock: true }
+    badpackets: { enabled: true }
+    fasteat: { enabled: true, required-streak: 2 }
+    antivoid: { enabled: true, offset-above-min: 10, cooldown-ms: 3000 }
+    fastplace: { enabled: true, min-interval-ms: 40, required-streak: 4, max-per-second: 12, tower-required-streak: 5 }
+    phase: { enabled: true, required-ticks: 3 }
+    glide: { enabled: true, min-fall-speed: 0.3, required-streak: 8, exempt-bedrock: true }
+    strafe: { enabled: true, max-angle-degrees: 120.0, required-streak: 3, min-speed-threshold: 0.08, max-streak-cap: 10, exempt-bedrock: true }
+    antihunger: { enabled: true, min-active-ticks: 100, required-stable-ticks: 60 }
+    antispam: { enabled: true, window-ms: 8000, max-messages: 6, escalation: kick, fallback-ban-reason: "Spam", fallback-ban-duration: 1d }
+    clientbrand: { suspicious-brands: [vape, wurst, impact, sigma, aristois], alert-permission: legendary.anticheat.alerts }
+    raidalert:
+      high-value-containers: [CHEST, TRAPPED_CHEST, BARREL, SHULKER_BOX]
+  tps-compensation:
+    enabled: true
+    min-tps: 15.0
+    max-factor: 1.5
+    # Adaptive sensitivity: when TPS drops, all flag weights are scaled down
+    # to prevent false-positive floods during lag spikes. The multiplier
+    # goes from 1.0 at 20 TPS down to "floor" at "cutoff-tps", then stays
+    # at floor below that. Set enabled: false to keep full sensitivity
+    # even during lag.
+    adaptive-sensitivity:
+      enabled: true
+      floor: 0.3
+      cutoff-tps: 14.0
+    # When TPS drops below this threshold, the threat-action system pauses
+    # automatic kicks and bans entirely to avoid punishing players for
+    # lag-induced false positives.
+    lag-suppress-tps: 10.0
+  threat-actions:
+    # Composite threat scoring: combines active hack count, total VL and
+    # player trust into a 0-100 score. Scans online players periodically
+    # and automatically kicks/bans those at extreme thresholds. A safety
+    # net on top of per-check escalation - catches players who spread
+    # violations across many checks without tripping any single ladder.
+    enabled: true
+    scan-interval-seconds: 10
+    kick-threshold: 60.0
+    ban-threshold: 85.0
+    kick-message: "<red>You have been removed for suspicious activity. If you believe this is an error, contact staff."
+    ban-message: "<red>Permanently banned by anti-cheat: confirmed cheating across multiple checks."
+    # Rapid response: when any check fires, the scanner switches from the
+    # normal interval (10s) to 1 tick (50ms) for a burst window, so the
+    # system reacts to active cheating in near-real-time instead of
+    # waiting up to 10s for the next scheduled scan. 1 tick = 50ms is the
+    # fastest Minecraft can schedule (0.01s is below 1 tick and impossible).
+    # The burst lasts for burst-ticks after the last flag, then reverts.
+    rapid-response:
+      enabled: true
+      interval-ticks: 1
+      burst-ticks: 200
+  # Anti-bypass hardening: prevents the legendary.anticheat.bypass permission
+  # from being a blanket "ignore all checks" super-perm. Critical checks
+  # always run regardless of bypass. Bypass usage is audited. OP accounts
+  # that get flagged too many times trigger a compromised-account alert.
+  anti-bypass:
+    audit-enabled: true
+    # These check IDs are NEVER bypassed, even if the player has bypass perm.
+    # Remove or add check IDs as needed for your server.
+    critical-checks:
+      - killaura
+      - aimassist
+      - impossiblehit
+      - movement
+      - noclip
+      - timer
+      - blink
+      - scaffold
+      - reach
+      - blockreach
+      - containerreach
+      - disabler
+      - invalidpacket
+      - packetflood
+    # Bypass players still accumulate VL at this reduced rate (0.3 = 30% weight).
+    # Set to 0.0 to fully suppress VL for bypass players, 1.0 for no reduction.
+    bypass-vl-weight-multiplier: 0.3
+    # OP self-check: if an OP player is flagged by >= N different checks within
+    # the time window, a "possible compromised account" alert is broadcast
+    # to all staff with legendary.anticheat.alerts — even if the OP has bypass.
+    op-self-check:
+      enabled: true
+      flag-threshold: 3
+      window-seconds: 30
+  bungee-sync:
+    # Broadcasts bans to every server on the same BungeeCord/Velocity network the instant
+    # they happen. Requires at least one player online to relay through. Leave off for a
+    # single, non-networked server.
+    enabled: false
+  database:
+    type: sqlite
+    file-name: legendary.db
+    mysql:
+      host: localhost
+      port: 3306
+      database: legendary
+      username: root
+      password: ""
+
+# ---- Join verification (anti-bot) -------------------------------
+verification:
+  enabled: true
+  limbo-world-name: legendary_limbo
+  timeout-seconds: 30
+  # move       = walk required-distance blocks (simple, no UI)
+  # clickblock = step on a marked pressure plate a few blocks from spawn (harder for a
+  #              connection-only bot that never sends any movement packets at all)
+  method: move
+  required-distance: 3.0
+  # Staff with legendary.verification.bypass skip the limbo entirely (as intended - they
+  # don't need to prove they're human) but would otherwise just stay wherever the vanilla
+  # server placed them. When true, they still get sent to the same release-location below,
+  # for consistency with everyone else.
+  always-spawn-on-join: true
+  # Where verified players are teleported after passing - always a fixed point, never their
+  # pre-verification location, so a bot/exploit attempt can't ride "wherever I logged out" to
+  # somewhere sensitive. Leave x/y/z unset to use the world's normal spawn point.
+  release-location:
+    world: ""          # empty = default world (first loaded world)
+    # x: 0.5
+    # y: 65.0
+    # z: 0.5
+    # yaw: 0.0
+    # pitch: 0.0
+  ip-rate-limit:
+    enabled: true
+    max-joins-per-minute: 6
+    kick-message: "<red>Too many join attempts from your network. Try again later."
+
+# ---- Replay recording ---------------------------------------------
+replay:
+  enabled: true
+  buffer-seconds: 15
+  snapshot-interval-ticks: 2
+  max-clips-per-player: 10
+
+# ---- Legacy PlaceholderAPI expansions merged into one ------------
+placeholders:
+  identifier: legendary

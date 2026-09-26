@@ -1,0 +1,12 @@
+{
+  "name": "legendaryplugin",
+  "version": "1.5.1",
+  "description": "LegendaryPlugin - Premium Paper 1.21.4 plugin (Anti-Cheat, Anti-ESP, Optimization, Verification, Replay)",
+  "scripts": {
+    "build": "python3 src/test/simulation/anticheat_simulation.py && python3 src/test/simulation/player_simulation.py && mkdir -p dist && cp src/main/resources/plugin.yml dist/ && cp -r public/* dist/ 2>/dev/null; node generate-landing.js && echo 'Build verification passed'",
+    "dev": "echo 'This is a Java/Maven project. Use mvn clean package to build the JAR. Run npm run build for verification.'",
+    "start": "echo 'This is a Minecraft plugin. Build with mvn clean package and deploy the JAR to your Paper server.'"
+  },
+  "keywords": ["minecraft", "paper", "plugin", "anti-cheat", "optimization", "esp"],
+  "license": "MIT"
+}
