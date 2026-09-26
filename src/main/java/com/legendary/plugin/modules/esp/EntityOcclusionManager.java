@@ -23,8 +23,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-
-/**
  * Anti-ESP entity occlusion: intercepts outgoing entity-related packets
  * (SPAWN_ENTITY, ENTITY_TELEPORT, REL_ENTITY_MOVE) and cancels them when
  * the target entity is behind solid blocks from the receiver's view,
@@ -34,6 +32,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * client from ever receiving the entity data) combined with ray-cast
  * occlusion culling from the receiver's eye location to the entity's
  * bounding box. Only active when ProtocolLib is present.
+ *
+ * PERFORMANCE FIX (2026-09-23): {@code onPacketSending} used to call
+ * {@code getEntityById}, which did a full {@code world.getEntities()}
+ * scan across every loaded world for every single outgoing
+ * SPAWN_ENTITY/ENTITY_TELEPORT/REL_ENTITY_MOVE/REL_ENTITY_MOVE_LOOK
+ * packet - these are among the highest-frequency packets a server sends
+ * (every nearby entity's every movement, for every player, every tick).
+ * On a populated server with a meaningful mob count this was an O(packets
+ * x total entities) hot path and a likely severe lag source - worse than
+ * any other single issue found in this plugin so far. Fixed by
+ * maintaining a periodically-refreshed entity-ID cache (rebuilt once per
+ * tick, alongside the existing visibility sweep, not once per packet) so
+ * the packet handler does a plain O(1) map lookup instead.
  */
 public final class EntityOcclusionManager extends PacketAdapter implements Listener {
 
@@ -44,7 +55,10 @@ public final class EntityOcclusionManager extends PacketAdapter implements Liste
     private double blockingThreshold;
     private boolean enabled;
     private BukkitTask visibilityTask;
+    private BukkitTask cacheRefreshTask;
     private final Map<UUID, Set<Integer>> hiddenEntities = new ConcurrentHashMap<>();
+    /** entity network ID -> Entity, rebuilt once per tick instead of scanned per packet. */
+    private volatile Map<Integer, Entity> entityIdCache = Map.of();
 
     public EntityOcclusionManager(LegendaryPlugin plugin) {
         super(plugin, ListenerPriority.HIGH,
@@ -67,6 +81,9 @@ public final class EntityOcclusionManager extends PacketAdapter implements Liste
         if (!enabled) return;
         protocolManager.addPacketListener(this);
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        // Rebuild the ID->Entity cache every tick - cheap (one pass over already-loaded
+        // entities, no packet-driven multiplication) and keeps onPacketSending() itself O(1).
+        cacheRefreshTask = Bukkit.getScheduler().runTaskTimer(plugin, this::refreshEntityCache, 0L, 1L);
         visibilityTask = Bukkit.getScheduler().runTaskTimer(plugin, this::updateVisibility, 20L, 10L);
     }
 
@@ -77,7 +94,22 @@ public final class EntityOcclusionManager extends PacketAdapter implements Liste
             visibilityTask.cancel();
             visibilityTask = null;
         }
+        if (cacheRefreshTask != null) {
+            cacheRefreshTask.cancel();
+            cacheRefreshTask = null;
+        }
         hiddenEntities.clear();
+        entityIdCache = Map.of();
+    }
+
+    private void refreshEntityCache() {
+        Map<Integer, Entity> next = new ConcurrentHashMap<>();
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                next.put(entity.getEntityId(), entity);
+            }
+        }
+        entityIdCache = next;
     }
 
     @Override
@@ -104,7 +136,6 @@ public final class EntityOcclusionManager extends PacketAdapter implements Liste
     }
 
     private boolean shouldHideEntity(Player viewer, Entity target) {
-        if (!viewer.getWorld().equals(target.getWorld())) return true;
         double distSq = viewer.getLocation().distanceSquared(target.getLocation());
         if (distSq <= minDistance * minDistance) return false;
         if (distSq > maxDistance * maxDistance) return true;
@@ -129,12 +160,8 @@ public final class EntityOcclusionManager extends PacketAdapter implements Liste
         hiddenEntities.remove(event.getPlayer().getUniqueId());
     }
 
+    /** O(1) cache lookup - see the class doc for why this replaced a per-packet world scan. */
     private Entity getEntityById(int entityId) {
-        for (org.bukkit.World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity.getEntityId() == entityId) return entity;
-            }
-        }
-        return null;
+        return entityIdCache.get(entityId);
     }
 }
