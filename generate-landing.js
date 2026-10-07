@@ -1,0 +1,2268 @@
+const fs = require('fs');
+const path = require('path');
+
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070a12">
+<meta name="description" content="LegendaryPlugin Pro v1.0.0 — Enterprise-grade Anti-Cheat with ML anomaly detection, Anti-ESP, Optimization, Verification, Replay, Anti-Reverse-Engineering and Anti-DDoS for Paper 1.21.x.">
+<title>LegendaryPlugin — Enterprise Protection for Paper 1.21.x</title>
+
+<style>
+:root {
+  --bg: #05070d;
+  --bg-2: #080c15;
+  --surface: rgba(15, 20, 32, .72);
+  --surface-solid: #0e1420;
+  --surface-2: #141c2b;
+
+  --blue: #4f8cff;
+  --blue-2: #2563eb;
+  --cyan: #22d3ee;
+  --green: #34d399;
+  --purple: #a78bfa;
+  --orange: #fbbf24;
+  --red: #fb7185;
+
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --dim: #64748b;
+
+  --border: rgba(255,255,255,.08);
+  --border-hover: rgba(255,255,255,.18);
+
+  --shadow: 0 25px 80px rgba(0,0,0,.45);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+               BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(59,130,246,.16), transparent 35%),
+    radial-gradient(circle at 90% 30%, rgba(34,211,238,.06), transparent 25%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  opacity: .3;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  animation: gridDrift 30s linear infinite;
+}
+
+@keyframes gridDrift {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 64px 64px, 64px 64px; }
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  left: 50%;
+  top: 20%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(37,99,235,.07);
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: -1;
+  animation: blobPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes blobPulse {
+  0% { opacity: .5; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: .8; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+/* =========================
+   PARTICLES CANVAS
+========================= */
+
+#particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, calc(100% - 32px));
+  height: 62px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 18px;
+
+  background: rgba(8,12,20,.72);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  box-shadow: 0 15px 50px rgba(0,0,0,.25);
+
+  z-index: 999;
+
+  transition: background .3s, border-color .3s;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+
+.brand-logo-3d {
+  width: 38px;
+  height: 38px;
+  position: relative;
+  perspective: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo-3d-inner {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+  transform-style: preserve-3d;
+  animation: logo3dSpin 6s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(59,130,246,.3);
+}
+
+.brand-logo-3d-fallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  box-shadow: 0 0 25px rgba(59,130,246,.35);
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  transform-style: preserve-3d;
+  animation: logo3dSpin 6s ease-in-out infinite;
+}
+
+@keyframes logo3dSpin {
+  0%, 100% { transform: rotateY(0deg) rotateX(5deg); }
+  25% { transform: rotateY(90deg) rotateX(5deg); }
+  50% { transform: rotateY(180deg) rotateX(5deg); }
+  75% { transform: rotateY(270deg) rotateX(5deg); }
+}
+
+.brand span {
+  color: #fff;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  transition: .2s;
+  position: relative;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: var(--blue);
+  transform: scaleX(0);
+  transition: transform .2s;
+}
+
+.nav-links a:hover {
+  color: white;
+  background: rgba(255,255,255,.06);
+}
+
+.nav-links a:hover::after {
+  transform: scaleX(1);
+}
+
+.nav-version {
+  font-size: 11px;
+  color: var(--green);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(52,211,153,.08);
+  border: 1px solid rgba(52,211,153,.18);
+  transition: .2s;
+}
+
+.nav-version:hover {
+  background: rgba(52,211,153,.15);
+  box-shadow: 0 0 15px rgba(52,211,153,.2);
+}
+
+@media(max-width:700px) {
+  .nav-links {
+    display: none;
+  }
+}
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+  min-height: 920px;
+  padding: 150px 24px 100px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  text-align: center;
+}
+
+.hero-inner {
+  max-width: 950px;
+  position: relative;
+  z-index: 2;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 8px 14px;
+
+  border: 1px solid rgba(79,140,255,.2);
+  border-radius: 999px;
+
+  background: rgba(79,140,255,.07);
+
+  color: #9cc0ff;
+  font-size: 12px;
+  font-weight: 700;
+
+  margin-bottom: 28px;
+
+  box-shadow: 0 0 30px rgba(59,130,246,.08);
+
+  animation: fadeInDown .8s ease-out;
+}
+
+.eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .6; transform: scale(1.3); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero h1 {
+  font-size: clamp(3.4rem, 9vw, 7rem);
+  line-height: .95;
+  letter-spacing: -.065em;
+  font-weight: 900;
+
+  background: linear-gradient(
+    135deg,
+    #ffffff 15%,
+    #dbeafe 45%,
+    #7aa7ff 75%,
+    #c4b5fd
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  margin-bottom: 22px;
+
+  animation: fadeInUp 1s ease-out .1s both;
+}
+
+.hero-title-line {
+  display: block;
+}
+
+.hero-title-line:nth-child(2) {
+  animation-delay: .25s;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  color: #a9c6ff;
+  font-size: 15px;
+  font-weight: 700;
+
+  margin-bottom: 25px;
+
+  animation: fadeInUp 1s ease-out .4s both;
+}
+
+.hero-version::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 12px var(--blue);
+}
+
+.hero-description {
+  max-width: 720px;
+  margin: auto;
+
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.8;
+
+  animation: fadeInUp 1s ease-out .5s both;
+}
+
+.hero-description strong {
+  color: #e2e8f0;
+  position: relative;
+}
+
+.hero-description strong::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  opacity: .5;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 34px;
+  flex-wrap: wrap;
+
+  animation: fadeInUp 1s ease-out .7s both;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 12px 19px;
+
+  border-radius: 11px;
+
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+
+  transition: .25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  transition: left .5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  color: white;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 10px 35px rgba(37,99,235,.25);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 45px rgba(37,99,235,.38);
+}
+
+.btn-secondary {
+  color: #cbd5e1;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  color: white;
+  border-color: var(--border-hover);
+  background: rgba(255,255,255,.07);
+  transform: translateY(-2px);
+}
+
+/* =========================
+   HERO 3D SCENE
+========================= */
+
+.hero-3d-scene {
+  position: absolute;
+  inset: 0;
+  perspective: 1200px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-orbit {
+  position: absolute;
+  width: 720px;
+  height: 720px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: .65;
+  transform-style: preserve-3d;
+  transition: transform .15s ease-out;
+}
+
+/* 3D Floating Shield */
+.hero-shield {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%) translateZ(80px);
+  transform-style: preserve-3d;
+  animation: shieldFloat 6s ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes shieldFloat {
+  0%, 100% { transform: translate(-50%, -50%) translateZ(80px) rotateY(0deg) translateY(0px); }
+  50% { transform: translate(-50%, -50%) translateZ(80px) rotateY(180deg) translateY(-15px); }
+}
+
+.shield-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  backface-visibility: hidden;
+}
+
+.shield-face.front {
+  background: linear-gradient(135deg, rgba(59,130,246,.15), rgba(34,211,238,.08));
+  border: 1px solid rgba(79,140,255,.2);
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(59,130,246,.15);
+}
+
+.shield-face.back {
+  background: linear-gradient(135deg, rgba(167,139,250,.12), rgba(59,130,246,.06));
+  border: 1px solid rgba(167,139,250,.18);
+  border-radius: 20px;
+  transform: rotateY(180deg);
+  box-shadow: 0 0 40px rgba(167,139,250,.12);
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(79,140,255,.07);
+  border-radius: 50%;
+  animation: orbitRotate 40s linear infinite;
+}
+
+.orbit:nth-child(2) {
+  inset: 80px;
+  border-color: rgba(167,139,250,.06);
+  animation: orbitRotate 30s linear infinite reverse;
+}
+
+.orbit:nth-child(3) {
+  inset: 170px;
+  border-color: rgba(34,211,238,.06);
+  animation: orbitRotate 20s linear infinite;
+}
+
+@keyframes orbitRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.orbit-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 170px;
+  height: 170px;
+  transform: translate(-50%,-50%);
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(59,130,246,.18),
+    rgba(59,130,246,.02) 70%,
+    transparent
+  );
+
+  filter: blur(2px);
+  animation: corePulse 4s ease-in-out infinite;
+}
+
+@keyframes corePulse {
+  0%, 100% { opacity: .6; transform: translate(-50%,-50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+}
+
+/* Orbiting particles */
+.orbit-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  top: -3px;
+  left: 50%;
+  margin-left: -3px;
+}
+
+.orbit .orbit-particle {
+  background: var(--blue);
+  box-shadow: 0 0 10px var(--blue);
+}
+
+.orbit:nth-child(2) .orbit-particle {
+  background: var(--purple);
+  box-shadow: 0 0 10px var(--purple);
+}
+
+.orbit:nth-child(3) .orbit-particle {
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+/* =========================
+   STATS
+========================= */
+
+.stats {
+  max-width: 1050px;
+  margin: -70px auto 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 5;
+}
+
+.stats-box {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+
+  background: rgba(14,20,32,.82);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  backdrop-filter: blur(20px);
+
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.stat {
+  padding: 27px 15px;
+  text-align: center;
+  position: relative;
+  transition: background .25s;
+}
+
+.stat:hover {
+  background: rgba(255,255,255,.03);
+}
+
+.stat:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: var(--border);
+}
+
+.stat-number {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  background: linear-gradient(135deg, #fff, #93c5fd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stat-label {
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+@media(max-width:650px) {
+  .stats-box {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .stat:nth-child(2)::after {
+    display: none;
+  }
+
+  .stat:nth-child(-n+2) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* =========================
+   SECTIONS
+========================= */
+
+section {
+  max-width: 1120px;
+  margin: auto;
+  padding: 110px 22px;
+}
+
+.section-head {
+  margin-bottom: 42px;
+}
+
+.section-kicker {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  margin-bottom: 9px;
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+}
+
+.section-sub {
+  max-width: 650px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* =========================
+   MODULES
+========================= */
+
+.modules {
+  display: grid;
+  grid-template-columns: repeat(6,1fr);
+  gap: 15px;
+}
+
+.card {
+  grid-column: span 2;
+
+  position: relative;
+
+  padding: 27px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.055),
+      rgba(255,255,255,.018)
+    );
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  overflow: hidden;
+  transform-style: preserve-3d;
+  perspective: 800px;
+
+  transition:
+    transform .15s ease-out,
+    border-color .25s,
+    box-shadow .25s;
+
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.card.reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-3d-content {
+  transform-style: preserve-3d;
+  transition: transform .15s ease-out;
+}
+
+.card-icon-3d {
+  transform: translateZ(40px);
+}
+
+.card h3 {
+  transform: translateZ(25px);
+}
+
+.card > p {
+  transform: translateZ(15px);
+}
+
+.card:nth-child(4),
+.card:nth-child(5),
+.card:nth-child(6),
+.card:nth-child(7) {
+  grid-column: span 3;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  top: -80px;
+  right: -70px;
+  background: var(--card-glow, rgba(79,140,255,.12));
+  filter: blur(45px);
+  transition: filter .3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: var(--border-hover);
+  box-shadow: 0 25px 60px rgba(0,0,0,.3);
+}
+
+.card:hover::before {
+  filter: blur(60px);
+}
+
+.card-icon {
+  width: 46px;
+  height: 46px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 13px;
+
+  font-size: 20px;
+
+  margin-bottom: 20px;
+
+  background: rgba(79,140,255,.1);
+  border: 1px solid rgba(79,140,255,.12);
+
+  transition: transform .3s;
+}
+
+.card:hover .card-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.card:nth-child(1) {
+  --card-glow: rgba(239,68,68,.15);
+}
+
+.card:nth-child(2) {
+  --card-glow: rgba(59,130,246,.15);
+}
+
+.card:nth-child(3) {
+  --card-glow: rgba(52,211,153,.15);
+}
+
+.card:nth-child(4) {
+  --card-glow: rgba(251,191,36,.15);
+}
+
+.card:nth-child(5) {
+  --card-glow: rgba(167,139,250,.15);
+}
+
+.card:nth-child(6) {
+  --card-glow: rgba(34,211,238,.15);
+}
+
+.card:nth-child(7) {
+  --card-glow: rgba(251,113,133,.15);
+}
+
+.card h3 {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.card > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.card ul {
+  list-style: none;
+}
+
+.card li {
+  color: #aebbd0;
+  font-size: 12px;
+  padding: 5px 0;
+  display: flex;
+  gap: 8px;
+  transition: color .2s;
+}
+
+.card li::before {
+  content: "✓";
+  color: var(--green);
+  font-weight: 900;
+}
+
+.card:hover li {
+  color: #cbd5e1;
+}
+
+/* =========================
+   CHECKS
+========================= */
+
+.checks-wrapper {
+  padding: 24px;
+
+  background: rgba(12,17,27,.75);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  box-shadow: var(--shadow);
+}
+
+.check-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  color: white;
+
+  border-radius: 10px;
+  padding: 11px 13px;
+
+  outline: none;
+
+  transition: .2s;
+}
+
+.search:focus {
+  border-color: rgba(79,140,255,.45);
+  box-shadow: 0 0 0 3px rgba(79,140,255,.08);
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  border-radius: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition: .2s;
+}
+
+.filter.active,
+.filter:hover {
+  color: white;
+  background: rgba(79,140,255,.12);
+  border-color: rgba(79,140,255,.25);
+}
+
+.checks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+  gap: 8px;
+}
+
+.check-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-height: 46px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: rgba(255,255,255,.025);
+
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: .2s;
+
+  opacity: 0;
+  animation: checkFadeIn .4s ease-out forwards;
+}
+
+@keyframes checkFadeIn {
+  from { opacity: 0; transform: scale(.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.check-item:hover,
+.check-item.active {
+  background: rgba(79,140,255,.08);
+  border-color: rgba(79,140,255,.25);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.check-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(52,211,153,.45);
+  transition: .2s;
+}
+
+.check-item:hover .check-dot {
+  background: var(--blue);
+  box-shadow: 0 0 12px rgba(79,140,255,.6);
+}
+
+.check-tip {
+  position: absolute;
+
+  width: 260px;
+
+  left: 50%;
+  bottom: calc(100% + 10px);
+
+  transform: translateX(-50%) translateY(5px);
+
+  padding: 14px;
+
+  background: #151d2c;
+  border: 1px solid var(--border-hover);
+  border-radius: 12px;
+
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+
+  box-shadow: 0 20px 50px rgba(0,0,0,.55);
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: .2s;
+  z-index: 20;
+}
+
+.check-item:hover .check-tip,
+.check-item.active .check-tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tip-title {
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.tip-cat {
+  color: var(--blue);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
+
+/* =========================
+   CHANGELOG
+========================= */
+
+.changelog {
+  position: relative;
+  padding-left: 30px;
+}
+
+.changelog::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(
+    var(--blue),
+    rgba(79,140,255,.08)
+  );
+}
+
+.changelog-entry {
+  position: relative;
+  padding: 0 0 45px 28px;
+
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.changelog-entry.reveal {
+  opacity: 1;
+  transform: translateX(0);
+  transition: .5s ease-out;
+}
+
+.changelog-entry::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 6px;
+
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow:
+    0 0 0 5px rgba(79,140,255,.08),
+    0 0 20px rgba(79,140,255,.5);
+}
+
+.version-badge {
+  display: inline-flex;
+  padding: 5px 9px;
+
+  border-radius: 7px;
+
+  background: rgba(79,140,255,.1);
+  border: 1px solid rgba(79,140,255,.15);
+
+  color: #9ec0ff;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.date {
+  color: var(--dim);
+  font-size: 11px;
+  margin: 7px 0 15px;
+}
+
+.changelog-entry ul {
+  list-style: none;
+}
+
+.changelog-entry li {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 5px 0;
+}
+
+.changelog-entry li::before {
+  content: "+";
+  color: var(--green);
+  font-weight: 900;
+  margin-right: 9px;
+}
+
+/* =========================
+   CTA
+========================= */
+
+.cta {
+  max-width: 1050px;
+  margin: 30px auto 100px;
+  padding: 0 22px;
+}
+
+.cta-box {
+  position: relative;
+  overflow: hidden;
+
+  padding: 55px 35px;
+
+  text-align: center;
+
+  border: 1px solid rgba(79,140,255,.18);
+  border-radius: 24px;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(59,130,246,.16),
+      transparent 60%
+    ),
+    rgba(13,18,29,.8);
+
+  box-shadow: var(--shadow);
+}
+
+.cta-box::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    rgba(59,130,246,.05),
+    transparent 30%
+  );
+  animation: ctaRotate 10s linear infinite;
+}
+
+@keyframes ctaRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cta-box > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cta-box h2 {
+  font-size: clamp(2rem,5vw,3rem);
+  letter-spacing: -.045em;
+  margin-bottom: 10px;
+}
+
+.cta-box p {
+  max-width: 600px;
+  margin: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer {
+  padding: 35px 20px 45px;
+
+  border-top: 1px solid var(--border);
+
+  text-align: center;
+
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.footer strong {
+  color: #aab7cb;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:850px) {
+  .modules {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .card,
+  .card:nth-child(4),
+  .card:nth-child(5),
+  .card:nth-child(6),
+  .card:nth-child(7) {
+    grid-column: span 1;
+  }
+
+  .hero {
+    min-height: 800px;
+  }
+
+  .hero-orbit {
+    width: 500px;
+    height: 500px;
+  }
+}
+
+@media(max-width:600px) {
+  section {
+    padding: 80px 16px;
+  }
+
+  .hero {
+    padding: 130px 18px 80px;
+  }
+
+  .hero h1 {
+    font-size: 3.5rem;
+  }
+
+  .hero-description {
+    font-size: 15px;
+  }
+
+  .modules {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .card:nth-child(4),
+  .card:nth-child(5),
+  .card:nth-child(6),
+  .card:nth-child(7) {
+    grid-column: span 1;
+  }
+
+  .checks-wrapper {
+    padding: 14px;
+  }
+
+  .check-tip {
+    width: 220px;
+  }
+
+  .cta-box {
+    padding: 40px 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- NAVBAR -->
+
+<nav class="navbar">
+  <div class="brand">
+    <div class="brand-logo-3d">
+      <img class="brand-logo-3d-inner" src="LegendaryPlugin-Logo.png" alt="LegendaryPlugin" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="brand-logo-3d-fallback" style="display:none">L</div>
+    </div>
+    <span>LegendaryPlugin</span>
+  </div>
+
+  <div class="nav-links">
+    <a href="#modules">Modules</a>
+    <a href="#checks">Checks</a>
+    <a href="#changelog">Changelog</a>
+  </div>
+
+  <div class="nav-version">Pro v1.0.0</div>
+</nav>
+
+
+<!-- HERO -->
+
+<header class="hero">
+
+  <div class="hero-3d-scene">
+    <div class="hero-orbit" id="heroOrbit">
+      <div class="orbit"><div class="orbit-particle"></div></div>
+      <div class="orbit"><div class="orbit-particle"></div></div>
+      <div class="orbit"><div class="orbit-particle"></div></div>
+      <div class="orbit-core"></div>
+      <div class="hero-shield">
+        <div class="shield-face front">🛡️</div>
+        <div class="shield-face back">⚔️</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-inner">
+
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      Paper 1.21.4 Compatible
+    </div>
+
+    <h1>
+      <span class="hero-title-line">Legendary</span>
+      <span class="hero-title-line">Plugin</span>
+    </h1>
+
+    <div class="hero-version">
+      Pro v1.0.0 — ML-Powered Detection Engine
+    </div>
+
+    <p class="hero-description">
+      A unified protection platform combining
+      <strong>Anti-Cheat</strong>,
+      <strong>Anti-ESP</strong>,
+      <strong>Optimization</strong>,
+      <strong>Verification</strong>,
+      <strong>Replay</strong>,
+      <strong>Anti-Reverse-Engineering</strong> and
+      <strong>Anti-DDoS</strong>
+      into one modular plugin.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#modules">
+        Explore Modules →
+      </a>
+
+      <a class="btn btn-secondary" href="#checks">
+        View 50 Checks
+      </a>
+
+      <a class="btn btn-secondary" href="#modules">
+        7 Modules
+      </a>
+    </div>
+
+  </div>
+</header>
+
+
+<!-- STATS -->
+
+<div class="stats">
+  <div class="stats-box">
+
+    <div class="stat">
+      <div class="stat-number">50</div>
+      <div class="stat-label">Anti-Cheat Checks</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">7</div>
+      <div class="stat-label">Core Modules</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">144</div>
+      <div class="stat-label">Source Files</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-number">2500+</div>
+      <div class="stat-label">Tests Passed</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- MODULES -->
+
+<section id="modules">
+
+  <div class="section-head">
+    <div class="section-kicker">Architecture</div>
+    <div class="section-title">Everything in one plugin.</div>
+    <div class="section-sub">
+      Seven powerful modules designed to work together while remaining independently configurable.
+    </div>
+  </div>
+
+  <div class="modules">
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">🛡️</div>
+      <h3>Anti-Cheat</h3>
+
+      <p>
+        50 detection checks including ML anomaly detection,
+        packet fingerprinting, behavioral profiling, violation escalation,
+        threat scoring, lockout system and TPS-adaptive protection.
+      </p>
+
+      <ul>
+        <li>KillAura, AimAssist, ImpossibleHit, GhostHand</li>
+        <li>Movement, NoFall, Phase, Step, Spider</li>
+        <li>Timer, Blink, Rotation, FastPlace, Scaffold</li>
+        <li>Jesus, Criticals, BowSpam, Xray, FastHeal</li>
+        <li>NoKnockback, AntiHunger, NoSlow</li>
+        <li>BadSessions, PacketFingerprint, BehaviorProfile</li>
+        <li>MccAnalyze, MlDetect — ML anomaly detection</li>
+        <li>Player lockout on critical flags</li>
+        <li>Aggressive escalation (alert→kick→ban)</li>
+        <li>Composite threat score 0–100</li>
+        <li>TPS-adaptive sensitivity</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">👁️</div>
+      <h3>Anti-ESP</h3>
+
+      <p>
+        Protects hidden information and reduces
+        unfair client-side visibility advantages.
+      </p>
+
+      <ul>
+        <li>Block obfuscation</li>
+        <li>Player visibility manager</li>
+        <li>View distance optimization</li>
+        <li>Anti-free-cam detection</li>
+        <li>Paper Anti-Xray advisory</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">⚡</div>
+      <h3>Optimization</h3>
+
+      <p>
+        TPS-aware server optimization designed
+        to reduce unnecessary entity and redstone load.
+      </p>
+
+      <ul>
+        <li>Entity sweep & merge</li>
+        <li>Mob cap enforcement</li>
+        <li>Hopper throttling</li>
+        <li>Redstone throttling</li>
+        <li>Join ramp optimizer</li>
+        <li>Chunk health reporter</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">🔐</div>
+      <h3>Verification</h3>
+
+      <p>
+        Join-limbo protection designed to slow down
+        automated bots before they reach the server.
+      </p>
+
+      <ul>
+        <li>Move verification</li>
+        <li>Click-block verification</li>
+        <li>IP rate limiting</li>
+        <li>Void limbo generator</li>
+        <li>Automatic verification flow</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">🎬</div>
+      <h3>Replay</h3>
+
+      <p>
+        Rolling movement buffers allow staff to
+        review suspicious gameplay after a violation.
+      </p>
+
+      <ul>
+        <li>Automatic flag recording</li>
+        <li>Staff playback manager</li>
+        <li>Snapshots & clips</li>
+        <li>Per-player clip history</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">🔬</div>
+      <h3>Anti Reverse-Engineering</h3>
+
+      <p>
+        Protects the plugin's bytecode from decompilation
+        and tampering. Detects JVM debuggers, class modifications
+        at runtime, and external plugins reflecting into internal packages.
+      </p>
+
+      <ul>
+        <li>JVM debugger / profiler detection</li>
+        <li>Class bytecode hash verification</li>
+        <li>External plugin reflection scan</li>
+        <li>Lockdown mode on tampering</li>
+        <li>Disables anti-cheat if modified</li>
+        <li>Staff alerts on RE attempts</li>
+      </ul>
+      </div>
+    </div>
+
+
+    <div class="card reveal-on-scroll" data-tilt>
+      <div class="card-3d-content">
+      <div class="card-icon card-icon-3d">🚨</div>
+      <h3>Anti-DDoS</h3>
+
+      <p>
+        Application-layer DDoS protection for self-hosted
+        servers without a proxy or CDN. Enforces global and
+        per-IP connection rate limits with auto-blacklisting.
+      </p>
+
+      <ul>
+        <li>Global login rate limiting</li>
+        <li>Per-IP connection caps</li>
+        <li>Auto-blacklist flooding IPs</li>
+        <li>Emergency lockdown mode</li>
+        <li>IP whitelist for trusted networks</li>
+        <li>Concurrent connection limiting</li>
+      </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- CHECKS -->
+
+<section id="checks">
+
+  <div class="section-head">
+    <div class="section-kicker">Detection Engine</div>
+    <div class="section-title">50 Anti-Cheat Checks.</div>
+    <div class="section-sub">
+      Search, filter and inspect every detection module.
+      Each check uses TPS compensation and Geyser exemptions where applicable.
+    </div>
+  </div>
+
+  <div class="checks-wrapper">
+
+    <div class="check-toolbar">
+
+      <input
+        id="search"
+        class="search"
+        placeholder="Search checks..."
+        autocomplete="off"
+      >
+
+      <div class="filters" id="filters"></div>
+
+    </div>
+
+    <div class="checks-grid" id="checksGrid"></div>
+
+  </div>
+</section>
+
+
+<!-- CHANGELOG -->
+
+<section id="changelog">
+
+  <div class="section-head">
+    <div class="section-kicker">Release History</div>
+    <div class="section-title">Changelog.</div>
+    <div class="section-sub">
+      Recent development milestones and stability improvements.
+    </div>
+  </div>
+
+  <div class="changelog">
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">Pro v1.0.0</span>
+      <div class="date">October 4, 2026</div>
+
+      <ul>
+        <li>5 new ML/statistical checks: BadSessions, PacketFingerprint, BehaviorProfile, MccAnalyze, MlDetect</li>
+        <li>ML-powered anomaly detection engine with sliding-window feature vectors</li>
+        <li>Packet fingerprinting — statistical distribution analysis of packet timing</li>
+        <li>Behavioral profiling — baseline deviation detection for mid-session hack toggling</li>
+        <li>Monte Carlo Consistency Analysis — statistical consistency testing</li>
+        <li>50 checks total (up from 45). 144 source files (up from 139).</li>
+        <li>2500+ simulation scenarios, 100% pass rate</li>
+        <li>Rebranded as Pro edition</li>
+      </ul>
+    </div>
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v2.1.0</span>
+      <div class="date">October 4, 2026</div>
+
+      <ul>
+        <li>3 composite heuristic checks: CombatHeuristics, MovementHeuristics, BlockRate</li>
+        <li>ChunkHeatmapManager — activity-based chunk optimization</li>
+        <li>MemoryPressureMonitor — JVM heap-pressure monitor</li>
+        <li>45 checks total (up from 42). 15 optimization sub-systems.</li>
+        <li>2312 simulation scenarios, 100% pass rate</li>
+      </ul>
+    </div>
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v2.0.0</span>
+      <div class="date">October 4, 2026</div>
+
+      <ul>
+        <li>Removed player trust scoring system (prevent VL farming)</li>
+        <li>Threat scoring recalibrated: hack count + VL only</li>
+        <li>Removed /legendaryac trust command</li>
+        <li>VL persists without passive decay — equal sensitivity for all</li>
+        <li>Plugin description upgraded to reflect research-grade maturity</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.8.0</span>
+      <div class="date">October 3, 2026</div>
+
+      <ul>
+        <li>New module: Anti Reverse-Engineering — JVM debugger detection, class bytecode tampering checks, external plugin reflection scan</li>
+        <li>New module: Anti-DDoS — global and per-IP connection rate limiting, auto-blacklist, emergency lockdown for self-hosted servers</li>
+        <li>Lockdown mode: disables anti-cheat on tampering, keeps Anti-DDoS active</li>
+        <li>/legendaryac security command for live security status</li>
+        <li>/legendaryac lockdown on|off for emergency DDoS lockdown</li>
+        <li>Auto-blacklist with configurable duration and violation threshold</li>
+        <li>IP whitelist for trusted networks during lockdown</li>
+        <li>7 modules total (up from 5)</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.7.0</span>
+      <div class="date">October 2, 2026</div>
+
+      <ul>
+        <li>3 new checks: GhostHand, NoKnockback, FastHeal (total: 45)</li>
+        <li>KillAura enhanced with rotation-snap and pre-aim detection</li>
+        <li>Scaffold enhanced with tower-bypass and rotation check</li>
+        <li>Lockout system: freeze cheaters on critical flags</li>
+        <li>Aggressive escalation: alert→kick→ban for critical checks</li>
+        <li>Threat thresholds lowered: kick at 40, ban at 65</li>
+        <li>Database: SQLite WAL + batch violation inserts</li>
+        <li>ESP performance: distance pre-checks, halved cache refresh</li>
+        <li>1705 simulation scenarios — 100% accuracy</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.6.0</span>
+      <div class="date">October 1, 2026</div>
+
+      <ul>
+        <li>Fixed DisablerCheck: now sends real transaction probes via ProtocolLib</li>
+        <li>Fixed BypassGuard: critical-checks list updated to match current check names</li>
+        <li>Fixed ThreatActionManager: minimum VL gate prevents false threat-bans</li>
+        <li>Fixed CheckProfile: preset enable/disable overrides now take effect</li>
+        <li>Rapid-response mode throttled to reduce CPU load on busy servers</li>
+        <li>Website upgraded with 3D animated logo and particle system</li>
+        <li>Scroll-reveal animations on all sections</li>
+        <li>1705 simulation scenarios — 100% accuracy</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.5.1</span>
+      <div class="date">September 26, 2026</div>
+
+      <ul>
+        <li>Full codebase audit: 28 runtime bug fixes across all 5 modules</li>
+        <li>Fixed cross-world distanceSquared crashes</li>
+        <li>Fixed zero-vector normalize crashes in AimAssist and ImpossibleHit</li>
+        <li>Fixed cross-world distance crashes in multiple checks</li>
+        <li>Fixed ViolationContext unloaded-world NPE</li>
+        <li>Fixed ShulkerNesting null hand item NPE</li>
+        <li>Fixed NoSlow unloaded-world NPE</li>
+        <li>Fixed DatabaseManager shutdown race condition</li>
+        <li>Fixed temporary bypass security issue</li>
+        <li>Fixed ModuleManager casing inconsistency</li>
+        <li>Fixed malformed UUID handling</li>
+        <li>Fixed DisablerCheck PONG packet NPE</li>
+        <li>Fixed VerificationManager cross-world issues</li>
+        <li>Fixed ReplayPlaybackManager CME risk</li>
+        <li>Fixed ProtectionRules removed-entity crash</li>
+        <li>Fixed OptimizationModule thread-safety issue</li>
+        <li>Fixed RateLimiter non-atomic window reset</li>
+        <li>1705 simulation scenarios — 100% accuracy</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.5.0</span>
+      <div class="date">September 25, 2026</div>
+
+      <ul>
+        <li>Composite threat scoring from 0–100</li>
+        <li>Automatic kick at threat score ≥60</li>
+        <li>Automatic ban at threat score ≥85</li>
+        <li>Live /legendaryac threats dashboard</li>
+        <li>TPS-adaptive sensitivity</li>
+        <li>Lag spike protection below 10 TPS</li>
+        <li>Threat score added to player profiles</li>
+        <li>1705 simulation scenarios</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.4.0</span>
+      <div class="date">September 24, 2026</div>
+
+      <ul>
+        <li>10 new Anti-Cheat checks</li>
+        <li>FastPlace upgraded with TPS compensation</li>
+        <li>Phase detection improvements</li>
+        <li>Glide detection improvements</li>
+        <li>Strafe detection improvements</li>
+        <li>AntiHunger monitoring system</li>
+        <li>Rotation snap detection fix</li>
+        <li>NoFall Slow Falling exemption</li>
+        <li>129 simulation scenarios — 100% pass rate</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.3.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>WatchManager for detailed staff monitoring</li>
+        <li>VanillaPhysics potion multipliers</li>
+        <li>GUI hub with Modules, Players and Checks</li>
+        <li>BungeeCord / Velocity ban synchronization</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.2.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>Geyser / Bedrock exemption</li>
+        <li>MythicMobs protection</li>
+        <li>Six new Anti-Cheat checks</li>
+        <li>Shared BlockWhitelist</li>
+      </ul>
+    </div>
+
+
+    <div class="changelog-entry reveal-on-scroll">
+      <span class="version-badge">v1.1.0</span>
+      <div class="date">September 19, 2026</div>
+
+      <ul>
+        <li>DatabaseManager violation persistence</li>
+        <li>Paper Anti-Xray advisory</li>
+        <li>ElytraFlight and InstaBreak</li>
+        <li>EntitySweepTask</li>
+        <li>AntiFreeCam violation pipeline</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- CTA -->
+
+<div class="cta">
+
+  <div class="cta-box">
+
+    <h2>Built for serious servers.</h2>
+
+    <p>
+      One plugin. Seven modules. 50 checks.
+      Designed for Paper 1.21.4 with performance and stability in mind.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#modules">
+        Explore LegendaryPlugin →
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- FOOTER -->
+
+<footer class="footer">
+  <strong>LegendaryPlugin Pro v1.0.0</strong>
+  &nbsp;·&nbsp;
+  Paper 1.21.4
+  &nbsp;·&nbsp;
+  MIT License
+  <br><br>
+  Anti-Cheat · Anti-ESP · Optimization · Verification · Replay · Anti-RE · Anti-DDoS
+</footer>
+
+
+<script>
+
+const checks = [
+  {name:'KillAura',cat:'Combat',desc:'Detects automated attack systems that lock onto targets through walls or with impossible precision.'},
+  {name:'AimAssist',cat:'Combat',desc:'Flags suspiciously smooth or perfectly tracked aim patterns.'},
+  {name:'ImpossibleHit',cat:'Combat',desc:'Catches hits from angles or distances that vanilla mechanics do not allow.'},
+  {name:'Spider',cat:'Movement',desc:'Flags players climbing walls without legitimate climbing surfaces.'},
+  {name:'AutoTotem',cat:'Inventory',desc:'Detects instant totem swaps.'},
+  {name:'AutoArmor',cat:'Inventory',desc:'Catches automated armor equipping.'},
+  {name:'BlockReach',cat:'Building',desc:'Flags block interactions beyond vanilla reach.'},
+  {name:'ContainerReach',cat:'Building',desc:'Detects container access from excessive distances.'},
+  {name:'FastInteract',cat:'Action',desc:'Flags interaction rates faster than vanilla allows.'},
+  {name:'FastBreak',cat:'Building',desc:'Detects abnormal block breaking speeds.'},
+  {name:'InventoryAction',cat:'Inventory',desc:'Catches suspicious inventory manipulations.'},
+  {name:'Knockback',cat:'Combat',desc:'Flags reduced or impossible knockback behavior.'},
+  {name:'Movement',cat:'Movement',desc:'Detects general movement anomalies.'},
+  {name:'NoFall',cat:'Movement',desc:'Flags players avoiding fall damage.'},
+  {name:'NoSlow',cat:'Movement',desc:'Detects normal movement while using slowing items.'},
+  {name:'NoSwing',cat:'Combat',desc:'Catches attacks without required swing animation.'},
+  {name:'Rotation',cat:'Combat',desc:'Flags impossible rotation patterns.'},
+  {name:'Step',cat:'Movement',desc:'Detects abnormal step height.'},
+  {name:'Timer',cat:'Packet',desc:'Catches packet timing manipulation.'},
+  {name:'Xray',cat:'World',desc:'Detects suspicious resource visibility behavior.'},
+  {name:'ElytraFlight',cat:'Movement',desc:'Flags abnormal elytra flight patterns.'},
+  {name:'InstaBreak',cat:'Building',desc:'Catches instant block breaking.'},
+  {name:'Jesus',cat:'Movement',desc:'Detects walking on water or lava.'},
+  {name:'AutoTool',cat:'Inventory',desc:'Catches instant automatic tool switching.'},
+  {name:'ShulkerNesting',cat:'Inventory',desc:'Detects suspicious shulker interactions.'},
+  {name:'ChestAura',cat:'Combat',desc:'Flags automated container targeting.'},
+  {name:'Criticals',cat:'Combat',desc:'Catches invalid critical hits.'},
+  {name:'FastClimb',cat:'Movement',desc:'Detects abnormal ladder and vine climbing.'},
+  {name:'JumpHeight',cat:'Movement',desc:'Flags abnormal jump height.'},
+  {name:'Blink',cat:'Packet',desc:'Catches packet buffering movement exploits.'},
+  {name:'GUIMove',cat:'Inventory',desc:'Detects movement while inventory screens are open.'},
+  {name:'BowSpam',cat:'Combat',desc:'Flags abnormal bow firing rates.'},
+  {name:'BadPackets',cat:'Packet',desc:'Flags malformed or impossible packets.'},
+  {name:'FastEat',cat:'Action',desc:'Catches abnormal food consumption speed.'},
+  {name:'AntiVoid',cat:'Movement',desc:'Detects void-death avoidance exploits.'},
+  {name:'FastPlace',cat:'Building',desc:'Flags abnormal block placement speeds.'},
+  {name:'Phase',cat:'Movement',desc:'Catches clipping through blocks.'},
+  {name:'Glide',cat:'Movement',desc:'Detects abnormal falling behavior.'},
+  {name:'AntiHunger',cat:'Action',desc:'Catches suspicious hunger depletion manipulation.'},
+  {name:'GhostHand',cat:'World',desc:'Detects interacting with containers and buttons through solid walls without line-of-sight.'},
+  {name:'NoKnockback',cat:'Combat',desc:'Flags players who partially or fully cancel knockback after being hit.'},
+  {name:'FastHeal',cat:'Action',desc:'Detects health regeneration faster than vanilla limits allow.'},
+  {name:'CombatHeuristics',cat:'Heuristic',desc:'Fuses swing-to-hit ratio, attack interval consistency, target-switch frequency, and rotation freeze into a composite combat detection.'},
+  {name:'MovementHeuristics',cat:'Heuristic',desc:'Fuses vertical acceleration, horizontal burst patterns, sprint-state inconsistency, velocity-response mismatch, and air-time into a composite movement detection.'},
+  {name:'BlockRate',cat:'Heuristic',desc:'Tracks break+place actions together in a sliding window with burst consistency analysis to catch auto-builders and nukers.'},
+  {name:'BadSessions',cat:'Packet',desc:'Detects rapid session cycling (join/quit spam) used by hacked clients to reset violation state or evade replay recording.'},
+  {name:'PacketFingerprint',cat:'Heuristic',desc:'Fingerprints the statistical distribution of player packet timing intervals. Flags abnormally low variance or bimodal peaks from timer, blink, or packet batching hacks.'},
+  {name:'BehaviorProfile',cat:'Heuristic',desc:'Builds a per-player behavioral profile over a warmup period, then monitors for deviations indicating a hack was toggled mid-session.'},
+  {name:'MccAnalyze',cat:'Heuristic',desc:'Monte Carlo Consistency Analysis — samples movement and combat behavior and runs a statistical consistency test against legitimate baselines.'},
+  {name:'MlDetect',cat:'Heuristic',desc:'ML-style anomaly detection using a sliding-window feature vector of movement metrics. Computes a confidence score using a distance-based classifier against the player rolling baseline.'}
+];
+
+const grid = document.getElementById('checksGrid');
+const search = document.getElementById('search');
+const filters = document.getElementById('filters');
+
+const categories = [
+  'All',
+  ...new Set(checks.map(c => c.cat))
+];
+
+let activeCategory = 'All';
+
+categories.forEach(cat => {
+
+  const button = document.createElement('button');
+
+  button.className = 'filter' + (
+    cat === 'All' ? ' active' : ''
+  );
+
+  button.textContent = cat;
+
+  button.onclick = () => {
+
+    activeCategory = cat;
+
+    document
+      .querySelectorAll('.filter')
+      .forEach(x => x.classList.remove('active'));
+
+    button.classList.add('active');
+
+    render();
+  };
+
+  filters.appendChild(button);
+});
+
+
+function render() {
+
+  const query = search.value.toLowerCase().trim();
+
+  grid.innerHTML = '';
+
+  const filtered = checks.filter(c => {
+
+    const matchesSearch =
+      c.name.toLowerCase().includes(query) ||
+      c.cat.toLowerCase().includes(query) ||
+      c.desc.toLowerCase().includes(query);
+
+    const matchesCategory =
+      activeCategory === 'All' ||
+      c.cat === activeCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  filtered.forEach((c, i) => {
+
+    const el = document.createElement('div');
+
+    el.className = 'check-item';
+    el.style.animationDelay = (i * 0.02) + 's';
+
+    el.innerHTML =
+      '<span class="check-dot"></span>' +
+      '<span>' + c.name + '</span>' +
+      '<div class="check-tip">' +
+        '<div class="tip-title">' + c.name + '</div>' +
+        '<div class="tip-cat">' + c.cat + '</div>' +
+        c.desc +
+      '</div>';
+
+    el.addEventListener('click', () => {
+      el.classList.toggle('active');
+    });
+
+    grid.appendChild(el);
+  });
+
+}
+
+
+search.addEventListener('input', render);
+
+render();
+
+
+/* Mobile tooltip */
+
+document.addEventListener('click', event => {
+
+  if (!event.target.closest('.check-item')) {
+
+    document
+      .querySelectorAll('.check-item.active')
+      .forEach(el => el.classList.remove('active'));
+
+  }
+
+});
+
+
+/* Scroll-reveal animations */
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('reveal');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+  revealObserver.observe(el);
+});
+
+
+/* Navbar scroll effect */
+
+const navbar = document.querySelector('.navbar');
+
+window.addEventListener('scroll', () => {
+
+  if (window.scrollY > 40) {
+
+    navbar.style.background = 'rgba(6,10,17,.9)';
+    navbar.style.borderColor = 'rgba(255,255,255,.12)';
+
+  } else {
+
+    navbar.style.background = 'rgba(8,12,20,.72)';
+    navbar.style.borderColor = 'rgba(255,255,255,.08)';
+
+  }
+
+});
+
+
+/* 3D Card Tilt — mouse-tracking perspective transform */
+
+document.querySelectorAll('[data-tilt]').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    const maxTilt = 12;
+    card.style.transform = 'perspective(800px) rotateX(' + (-dy * maxTilt) + 'deg) rotateY(' + (dx * maxTilt) + 'deg) scale(1.03)';
+    const content = card.querySelector('.card-3d-content');
+    if (content) {
+      content.style.transform = 'translateZ(30px)';
+    }
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+    const content = card.querySelector('.card-3d-content');
+    if (content) {
+      content.style.transform = '';
+    }
+  });
+});
+
+/* Hero 3D Parallax — orbit and shield respond to mouse */
+
+const heroOrbit = document.getElementById('heroOrbit');
+const heroSection = document.querySelector('.hero');
+
+if (heroOrbit && heroSection) {
+  let parallaxRAF = null;
+  heroSection.addEventListener('mousemove', e => {
+    if (parallaxRAF) cancelAnimationFrame(parallaxRAF);
+    parallaxRAF = requestAnimationFrame(() => {
+      const rect = heroSection.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      heroOrbit.style.transform = 'translate(-50%, -50%) rotateX(' + (py * 15) + 'deg) rotateY(' + (px * 25) + 'deg)';
+    });
+  });
+  heroSection.addEventListener('mouseleave', () => {
+    heroOrbit.style.transform = 'translate(-50%, -50%)';
+  });
+}
+
+
+/* Particle background system */
+
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let mouseX = 0, mouseY = 0;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+function initParticles() {
+  particles = [];
+  const count = Math.min(60, Math.floor(window.innerWidth / 25));
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+      opacity: Math.random() * 0.4 + 0.1
+    });
+  }
+}
+
+initParticles();
+window.addEventListener('resize', initParticles);
+
+function animateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  particles.forEach((p, i) => {
+    p.x += p.vx;
+    p.y += p.vy;
+
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 120) {
+      const force = (120 - dist) / 120;
+      p.x -= dx * force * 0.01;
+      p.y -= dy * force * 0.01;
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(79,140,255,' + p.opacity + ')';
+    ctx.fill();
+
+    for (let j = i + 1; j < particles.length; j++) {
+      const p2 = particles[j];
+      const ddx = p.x - p2.x;
+      const ddy = p.y - p2.y;
+      const d = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (d < 100) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = 'rgba(79,140,255,' + (0.08 * (1 - d / 100)) + ')';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  });
+
+  requestAnimationFrame(animateParticles);
+}
+
+animateParticles();
+
+</script>
+
+</body>
+</html>
+`;
+
+const dist = path.join(__dirname, 'dist');
+
+if (!fs.existsSync(dist)) {
+  fs.mkdirSync(dist, { recursive: true });
+}
+
+fs.writeFileSync(
+  path.join(dist, 'index.html'),
+  html,
+  'utf8'
+);
+
+console.log('LegendaryPlugin landing page generated to dist/index.html');
