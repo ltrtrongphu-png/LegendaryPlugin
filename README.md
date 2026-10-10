@@ -1,4 +1,4 @@
-# LegendaryPlugin Pro
+# LegendaryPlugin v1.8.0
 
 **Enterprise-grade Paper 1.21.x anti-cheat, anti-X-ray/ESP, server optimization
 and join-verification platform.** Pro edition — result of extensive research and
@@ -7,6 +7,26 @@ detection checks including ML-style anomaly detection, packet fingerprinting,
 behavioral profiling, Monte Carlo consistency analysis, composite heuristic
 fusion engine, TPS-adaptive sensitivity, violation persistence, replay recording,
 threat dashboard, anti-bypass hardening, and modular architecture.
+
+---
+
+## Copyright & License
+
+**© WhiteBlackMC709 — All rights reserved.**
+
+This plugin and its entire source code are the exclusive property of
+**WhiteBlackMC709**. Unauthorized copying, redistribution, modification,
+reverse engineering, decompilation, or resale of this plugin or any portion
+of its code is **strictly prohibited**.
+
+You may NOT:
+- Copy, clone, or reproduce any part of this plugin's source code
+- Redistribute or share the plugin (compiled or source) without written permission
+- Modify, rebrand, or claim ownership of this plugin
+- Reverse engineer, decompile, or disassemble the plugin's bytecode
+- Sell, lease, or sublicense the plugin to third parties
+
+---
 
 | Module             | Description (`modules.<id>` in config.yml) |
 |---------------------|-----------------------------------------------|
