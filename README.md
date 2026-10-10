@@ -1,4 +1,4 @@
-# LegendaryPlugin v1.8.0
+# LegendaryPlugin Pro v1.0.1
 
 **Enterprise-grade Paper 1.21.x anti-cheat, anti-X-ray/ESP, server optimization
 and join-verification platform.** Pro edition — result of extensive research and
