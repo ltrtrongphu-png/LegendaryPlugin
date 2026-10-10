@@ -29,6 +29,10 @@ import java.util.Optional;
  *   - BaB              -> {@link AnticheatModule}       (anti-cheat)
  *                       + {@link VerificationModule}, {@link ReplayModule} (also from BaB)
  *
+ * Copyright (c) WhiteBlackMC709. All rights reserved.
+ * Unauthorized copying, redistribution, modification, or resale of this plugin
+ * or any portion of its source code is strictly prohibited.
+ *
  * All feature toggling goes through {@link ModuleManager}; nothing here
  * does file/network I/O directly on the main thread (see AsyncConfigLoader,
  * HistoryFileWriter, DatabaseManager, DiscordNotifier for the async paths).
@@ -79,6 +83,8 @@ public final class LegendaryPlugin extends JavaPlugin {
         }
 
         StartupBanner.print(this, moduleManager);
+        getLogger().info("Copyright (c) WhiteBlackMC709 — All rights reserved.");
+        getLogger().info("Unauthorized copying or redistribution of this plugin is strictly prohibited.");
         getLogger().info("LegendaryPlugin enabled - modules: "
             + moduleManager.all().keySet());
         metrics.gauge("plugin.version").set(parseVersionForGauge(getPluginMeta().getVersion()));
