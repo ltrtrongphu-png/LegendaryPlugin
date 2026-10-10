@@ -7,7 +7,8 @@ const html = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#070a12">
-<meta name="description" content="LegendaryPlugin Pro v1.0.0 — Enterprise-grade Anti-Cheat with ML anomaly detection, Anti-ESP, Optimization, Verification, Replay, Anti-Reverse-Engineering and Anti-DDoS for Paper 1.21.x.">
+<meta name="description" content="LegendaryPlugin v1.8.0 — Enterprise-grade Anti-Cheat with ML anomaly detection, Anti-ESP, Optimization, Verification, Replay, Anti-Reverse-Engineering and Anti-DDoS for Paper 1.21.x.">
+<meta name="copyright" content="© WhiteBlackMC709 — All rights reserved.">
 <title>LegendaryPlugin — Enterprise Protection for Paper 1.21.x</title>
 
 <style>
@@ -1363,7 +1364,7 @@ section {
     <a href="#changelog">Changelog</a>
   </div>
 
-  <div class="nav-version">Pro v1.0.0</div>
+  <div class="nav-version">v1.8.0</div>
 </nav>
 
 
@@ -1397,7 +1398,7 @@ section {
     </h1>
 
     <div class="hero-version">
-      Pro v1.0.0 — ML-Powered Detection Engine
+      v1.8.0 — ML-Powered Detection Engine
     </div>
 
     <p class="hero-description">
@@ -1683,8 +1684,8 @@ section {
   <div class="changelog">
 
     <div class="changelog-entry reveal-on-scroll">
-      <span class="version-badge">Pro v1.0.0</span>
-      <div class="date">October 4, 2026</div>
+      <span class="version-badge">v1.8.0</span>
+      <div class="date">October 10, 2026</div>
 
       <ul>
         <li>5 new ML/statistical checks: BadSessions, PacketFingerprint, BehaviorProfile, MccAnalyze, MlDetect</li>
@@ -1909,13 +1910,17 @@ section {
 <!-- FOOTER -->
 
 <footer class="footer">
-  <strong>LegendaryPlugin Pro v1.0.0</strong>
+  <strong>LegendaryPlugin v1.8.0</strong>
   &nbsp;·&nbsp;
   Paper 1.21.4
   &nbsp;·&nbsp;
-  MIT License
+  © WhiteBlackMC709 — All rights reserved.
   <br><br>
   Anti-Cheat · Anti-ESP · Optimization · Verification · Replay · Anti-RE · Anti-DDoS
+  <br><br>
+  This plugin and its source code are the exclusive property of WhiteBlackMC709.
+  Unauthorized copying, redistribution, modification, or resale of this plugin or
+  any portion of its code is strictly prohibited.
 </footer>
 
 
