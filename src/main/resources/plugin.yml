@@ -2,7 +2,7 @@ name: LegendaryPlugin
 version: '${project.version}'
 main: com.legendary.plugin.LegendaryPlugin
 api-version: '1.21'
-author: LegendaryNetworkDev
+author: WhiteBlackMC709
 description: >
   Unified anti-cheat, anti-X-ray/ESP protection, server optimization and
   join-verification platform. Pro edition with 50 heuristic checks including
@@ -12,6 +12,10 @@ description: >
   fingerprinting, and modular architecture. Result of extensive research
   across 12 major versions.
 website: https://legendaryplugin.dev
+
+# Copyright (c) WhiteBlackMC709 — All rights reserved.
+# Unauthorized copying, redistribution, modification, or resale of this plugin
+# or any portion of its source code is strictly prohibited.
 
 # All third-party integrations are optional (soft-depend) and every module
 # gracefully disables itself if the dependency is missing.
