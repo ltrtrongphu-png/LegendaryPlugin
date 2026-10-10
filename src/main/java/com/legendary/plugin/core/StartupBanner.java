@@ -29,6 +29,7 @@ public final class StartupBanner {
         for (String line : BANNER_ART) plugin.getLogger().info(line);
         plugin.getLogger().info("");
         plugin.getLogger().info("  Paper 1.21.4 | Anti-Cheat | Anti-ESP | Optimization | Verification | Replay");
+        plugin.getLogger().info("  Copyright (c) WhiteBlackMC709 — All rights reserved.");
         plugin.getLogger().info("");
 
         plugin.getLogger().info("  Module Status:");
