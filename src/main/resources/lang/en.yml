@@ -1,0 +1,61 @@
+# LegendaryPlugin - English locale
+# Copyright (c) WhiteBlackMC709. All rights reserved.
+
+general:
+  prefix: "LegendaryPlugin"
+  language-name: "English"
+  no-permission: "<red>You don't have permission to use this command."
+  player-only: "<red>This command can only be used by players."
+  unknown-subcommand: "<red>Unknown subcommand. Use <white>/legendary help</white> for help."
+  reloaded: "<green>Configuration reloaded successfully."
+
+optimization:
+  level-change: "<gray>[<gradient:#38BDF8:#A855F7>Legendary</gradient>] <white>TPS %tps% - level %from% -> <yellow>%to%"
+  clear-warning: "<yellow>[LegendaryPlugin] <white>Clearing loose items/mobs in %seconds%s."
+  clear-result: "<green>Cleared <white>%count%<green> entities."
+  entities-unloaded: "[Optimization] Unloaded %count% empty chunks to free memory (SEVERE lag)."
+
+antiafkbot:
+  prefix: "<gray>[<red>AntiAfkBot<gray>] "
+  kick-message: "<red>You have been kicked for being inactive (AFK)."
+  kick-broadcast: "<yellow>%player% <gray>was kicked for AFK inactivity."
+  check-started: "<gray>AntiAfkBot check started. Monitoring %count% players."
+  exempt: "<green>%player% <gray>is exempt from AntiAfkBot."
+
+antichunkban:
+  prefix: "<gray>[<red>AntiChunkBan<gray>] "
+  quarantine-warning: "<red>[AntiChunkBan] <gray>That chunk is quarantined for safety. You cannot enter it."
+  danger-detected: "<red>[AntiChunkBan] <gray>Dangerous chunk detected! Moving you to safety."
+  teleport-cancelled: "<red>[AntiChunkBan] <gray>Teleport destination is in a quarantined chunk. Teleport cancelled."
+  teleport-redirected: "<red>[AntiChunkBan] <gray>Teleport destination is dangerous! Redirecting to safety."
+  login-redirected: "<red>[AntiChunkBan] <gray>Your login location was unsafe. You've been moved to a safe area."
+
+antiinfinitewater:
+  prefix: "<gray>[<red>AntiInfiniteWater<gray>] "
+  blocked: "<red>[AntiInfiniteWater] <gray>Infinite water creation is not allowed on this server."
+  rate-limited: "<red>[AntiInfiniteWater] <gray>You're placing water too fast. Slow down."
+
+anticheat:
+  alert-format: "<gray>[<gold>AC<gray>] <yellow>%player% <gray>failed <white>%check% <gray>(VL <red>%vl%/%threshold%)"
+  ban-broadcast: "<red>%player% <gray>has been banned for <white>%reason%"
+  lockout: "<red>%player% <gray>has been frozen for suspicious activity."
+  lockout-released: "<green>%player% <gray>has been released from lockout."
+
+verification:
+  kick-too-many: "<red>Too many join attempts from your network. Try again later."
+  prompt-move: "<yellow>Please move to verify you are human."
+  prompt-click: "<yellow>Please step on the pressure plate to verify."
+  verified: "<green>Verification complete. Welcome!"
+  timeout: "<red>Verification timed out. Please reconnect."
+
+security:
+  lockdown-enabled: "<red>DDoS lockdown enabled. Only whitelisted IPs can join."
+  lockdown-disabled: "<green>DDoS lockdown disabled."
+  debugger-detected: "<red>DEBUGGER DETECTED — anti-cheat entering lockdown mode."
+  tampering-detected: "<red>CLASS TAMPERING DETECTED — anti-cheat entering lockdown mode."
+
+modules:
+  enabled: "<green>Module <white>%module% <green>enabled."
+  disabled: "<yellow>Module <white>%module% <yellow>disabled."
+  reloaded: "<green>Module <white>%module% <green>reloaded."
+  not-found: "<red>Module <white>%module% <red>not found."
