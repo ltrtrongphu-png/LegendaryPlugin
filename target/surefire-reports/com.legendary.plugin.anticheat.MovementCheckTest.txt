@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.legendary.plugin.anticheat.MovementCheckTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.199 s -- in com.legendary.plugin.anticheat.MovementCheckTest

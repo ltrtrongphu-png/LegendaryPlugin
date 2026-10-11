@@ -1,0 +1,9 @@
+com/legendary/plugin/anticheat/AnticheatSimulation$Scenario.class
+com/legendary/plugin/anticheat/AnticheatSimulation.class
+com/legendary/plugin/anticheat/CheckTestBase.class
+com/legendary/plugin/anticheat/CriticalsCheckTest.class
+com/legendary/plugin/anticheat/MovementCheckTest.class
+com/legendary/plugin/anticheat/NoFallCheckTest.class
+com/legendary/plugin/anticheat/NoSwingCheckTest.class
+com/legendary/plugin/anticheat/CheckTestBase$FlagCall.class
+com/legendary/plugin/anticheat/KillAuraCheckTest.class

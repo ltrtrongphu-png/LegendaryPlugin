@@ -1,0 +1,61 @@
+# LegendaryPlugin - Tieng Viet (Vietnamese locale)
+# Copyright (c) WhiteBlackMC709. All rights reserved.
+
+general:
+  prefix: "LegendaryPlugin"
+  language-name: "Tieng Viet"
+  no-permission: "<red>Ban khong co quyen su dung lenh nay."
+  player-only: "<red>Lenh nay chi co the dung boi nguoi choi."
+  unknown-subcommand: "<red>Lenh khong hop le. Nhap <white>/legendary help</white> de xem huong dan."
+  reloaded: "<green>Cau hinh da tai lai thanh cong."
+
+optimization:
+  level-change: "<gray>[<gradient:#38BDF8:#A855F7>Legendary</gradient>] <white>TPS %tps% - muc %from% -> <yellow>%to%"
+  clear-warning: "<yellow>[LegendaryPlugin] <white>Dang don vat pham/trong %seconds%s nua."
+  clear-result: "<green>Da don <white>%count%<green> vat pham."
+  entities-unloaded: "[Optimization] Da go %count% chunk trong de giai phong bo nho (lag nghiem trong)."
+
+antiafkbot:
+  prefix: "<gray>[<red>AntiAfkBot<gray>] "
+  kick-message: "<red>Ban da bi kick vi khong hoat dong (AFK)."
+  kick-broadcast: "<yellow>%player% <gray>da bi kick vi AFK."
+  check-started: "<gray>AntiAfkBot dang kiem tra. Giam sat %count% nguoi choi."
+  exempt: "<green>%player% <gray>duoc mien khoi AntiAfkBot."
+
+antichunkban:
+  prefix: "<gray>[<red>AntiChunkBan<gray>] "
+  quarantine-warning: "<red>[AntiChunkBan] <gray>Chunk do dang bi cach ly de dam bao an toan. Ban khong the vao."
+  danger-detected: "<red>[AntiChunkBan] <gray>Phat hien chunk nguy hiem! Dang di chuyen ban den noi an toan."
+  teleport-cancelled: "<red>[AntiChunkBan] <gray>Diem dichuyen nam trong chunk cach ly. Dichuyen bi huy."
+  teleport-redirected: "<red>[AntiChunkBan] <gray>Diem dichuyen nguy hiem! Dang huong den noi an toan."
+  login-redirected: "<red>[AntiChunkBan] <gray>Vi tri dang nhap cua ban khong an toan. Ban da duoc chuyen den khu vuc an toan."
+
+antiinfinitewater:
+  prefix: "<gray>[<red>AntiInfiniteWater<gray>] "
+  blocked: "<red>[AntiInfiniteWater] <gray>Tao nuoc vo tan khong duoc phep tren server nay."
+  rate-limited: "<red>[AntiInfiniteWater] <gray>Ban dang dat nuoc qua nhanh. Giam toc do xuong."
+
+anticheat:
+  alert-format: "<gray>[<gold>AC<gray>] <yellow>%player% <gray>vi pham <white>%check% <gray>(VL <red>%vl%/%threshold%)"
+  ban-broadcast: "<red>%player% <gray>da bi ban vi <white>%reason%"
+  lockout: "<red>%player% <gray>da bi dong bang vi hoat dong dang nghi ngo."
+  lockout-released: "<green>%player% <gray>da duoc go dong bang."
+
+verification:
+  kick-too-many: "<red>Qua nhieu lan ket noi tu mang cua ban. Vui long thu lai sau."
+  prompt-move: "<yellow>Vui long di chuyen de xac minh ban la nguoi."
+  prompt-click: "<yellow>Vui long dap len tam ben de xac minh."
+  verified: "<green>Xac minh hoan tat. Chao mung!"
+  timeout: "<red>Xac minh qua han. Vui long ket noi lai."
+
+security:
+  lockdown-enabled: "<red>Chong DDoS da bat. Chi IP trong danh sach moi vao duoc."
+  lockdown-disabled: "<green>Chong DDoS da tat."
+  debugger-detected: "<red>PHAT HIEN DEBUGGER — anti-cheat chuyen sang che do khoa."
+  tampering-detected: "<red>PHAT HIEN CHINH SUA CODE — anti-cheat chuyen sang che do khoa."
+
+modules:
+  enabled: "<green>Module <white>%module% <green>da bat."
+  disabled: "<yellow>Module <white>%module% <yellow>da tat."
+  reloaded: "<green>Module <white>%module% <green>da tai lai."
+  not-found: "<red>Khong tim thay module <white>%module%<red>."
