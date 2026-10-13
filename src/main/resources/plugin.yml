@@ -55,6 +55,7 @@ commands:
       /<command> release <player>
       /<command> security
       /<command> lockdown <on|off>
+      /<command> confirmban <online-player>
 
 permissions:
   legendary.admin:
@@ -62,6 +63,9 @@ permissions:
     default: op
   legendary.anticheat.admin:
     description: Access to anti-cheat management commands and alerts.
+    default: op
+  legendary.anticheat.bypass:
+    description: Accumulate reduced anti-cheat violation weight without automated staff actions.
     default: op
   legendary.anticheat.alerts:
     description: Receive real-time anti-cheat violation alerts.

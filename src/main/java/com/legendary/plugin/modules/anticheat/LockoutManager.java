@@ -4,6 +4,9 @@ import com.legendary.plugin.LegendaryPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -46,7 +49,16 @@ public final class LockoutManager implements Listener {
     private final Map<UUID, Location> lockLocations = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lockTimes = new ConcurrentHashMap<>();
     private final Set<UUID> locked = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Boolean> previousInvulnerability = new ConcurrentHashMap<>();
+    private NamespacedKey lockedKey;
+    private NamespacedKey worldKey;
+    private NamespacedKey xKey;
+    private NamespacedKey yKey;
+    private NamespacedKey zKey;
+    private NamespacedKey lockedAtKey;
+    private NamespacedKey wasInvulnerableKey;
     private long autoReleaseMs;
+    private boolean safeMode;
     private org.bukkit.scheduler.BukkitTask freezeTask;
 
     public LockoutManager(LegendaryPlugin plugin) {
@@ -54,11 +66,27 @@ public final class LockoutManager implements Listener {
     }
 
     public void loadConfigValues() {
-        autoReleaseMs = plugin.getConfig().getLong("anticheat.lockout.auto-release-seconds", 0) * 1000L;
+        autoReleaseMs = Math.max(1L, plugin.getConfig().getLong("anticheat.lockout.auto-release-seconds", 120)) * 1000L;
+        safeMode = plugin.getConfig().getBoolean("anticheat.safe-mode", true);
+        lockedKey = new NamespacedKey(plugin, "anticheat_lockout");
+        worldKey = new NamespacedKey(plugin, "anticheat_lockout_world");
+        xKey = new NamespacedKey(plugin, "anticheat_lockout_x");
+        yKey = new NamespacedKey(plugin, "anticheat_lockout_y");
+        zKey = new NamespacedKey(plugin, "anticheat_lockout_z");
+        lockedAtKey = new NamespacedKey(plugin, "anticheat_lockout_at");
+        wasInvulnerableKey = new NamespacedKey(plugin, "anticheat_lockout_invulnerable");
+        if (safeMode) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (isLocked(player)) release(player);
+            }
+        }
     }
 
     public void start() {
         stop();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (locked.contains(player.getUniqueId())) player.setInvulnerable(true);
+        }
         freezeTask = Bukkit.getScheduler().runTaskTimer(plugin, this::enforceFreeze, 0L, 5L);
     }
 
@@ -66,12 +94,40 @@ public final class LockoutManager implements Listener {
         if (freezeTask != null) { freezeTask.cancel(); freezeTask = null; }
     }
 
+    public void restoreAfterDisable() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!locked.contains(player.getUniqueId())) continue;
+            boolean wasInvulnerable = previousInvulnerability.getOrDefault(player.getUniqueId(),
+                player.getPersistentDataContainer().getOrDefault(
+                    wasInvulnerableKey, PersistentDataType.BYTE, (byte) 0) == 1);
+            player.setInvulnerable(wasInvulnerable);
+        }
+    }
+
     public void lock(Player player, String reason) {
+        if (safeMode) return;
         UUID uuid = player.getUniqueId();
         if (locked.contains(uuid)) return;
         locked.add(uuid);
-        lockLocations.put(uuid, player.getLocation().clone());
-        lockTimes.put(uuid, System.currentTimeMillis());
+        Location safeLocation = findSafeLocation(player);
+        lockLocations.put(uuid, safeLocation);
+        long now = System.currentTimeMillis();
+        lockTimes.put(uuid, now);
+        boolean wasInvulnerable = player.isInvulnerable();
+        previousInvulnerability.put(uuid, wasInvulnerable);
+        var pdc = player.getPersistentDataContainer();
+        pdc.set(lockedKey, PersistentDataType.BYTE, (byte) 1);
+        pdc.set(worldKey, PersistentDataType.STRING, safeLocation.getWorld().getUID().toString());
+        pdc.set(xKey, PersistentDataType.DOUBLE, safeLocation.getX());
+        pdc.set(yKey, PersistentDataType.DOUBLE, safeLocation.getY());
+        pdc.set(zKey, PersistentDataType.DOUBLE, safeLocation.getZ());
+        pdc.set(lockedAtKey, PersistentDataType.LONG, now);
+        pdc.set(wasInvulnerableKey, PersistentDataType.BYTE, (byte) (wasInvulnerable ? 1 : 0));
+        player.setInvulnerable(true);
+        if (!player.getLocation().getWorld().equals(safeLocation.getWorld())
+            || player.getLocation().distanceSquared(safeLocation) > 0.25) {
+            player.teleport(safeLocation);
+        }
         plugin.getLogger().warning("[Lockout] " + player.getName() + " locked: " + reason);
         for (Player staff : Bukkit.getOnlinePlayers()) {
             if (staff.hasPermission("legendary.anticheat.alerts")) {
@@ -89,6 +145,13 @@ public final class LockoutManager implements Listener {
         locked.remove(uuid);
         lockLocations.remove(uuid);
         lockTimes.remove(uuid);
+        Boolean wasInvulnerable = previousInvulnerability.remove(uuid);
+        if (wasInvulnerable == null) {
+            wasInvulnerable = player.getPersistentDataContainer().getOrDefault(
+                wasInvulnerableKey, PersistentDataType.BYTE, (byte) 0) == 1;
+        }
+        player.setInvulnerable(wasInvulnerable);
+        clearPersistentLockout(player);
         player.sendMessage(com.legendary.plugin.util.Text.of("<green>You have been released by staff."));
     }
 
@@ -109,17 +172,59 @@ public final class LockoutManager implements Listener {
                 }
             }
             Player player = Bukkit.getPlayer(uuid);
-            if (player == null || !player.isOnline()) {
-                locked.remove(uuid);
-                lockLocations.remove(uuid);
-                lockTimes.remove(uuid);
-                continue;
-            }
+            if (player == null || !player.isOnline()) continue;
+            player.setInvulnerable(true);
             Location lockLoc = lockLocations.get(uuid);
             if (lockLoc != null && player.getLocation().distanceSquared(lockLoc) > 0.25) {
                 player.teleport(lockLoc);
             }
         }
+    }
+
+    @EventHandler
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        var pdc = player.getPersistentDataContainer();
+        if (pdc.getOrDefault(lockedKey, PersistentDataType.BYTE, (byte) 0) != 1) return;
+        if (safeMode) {
+            player.setInvulnerable(pdc.getOrDefault(wasInvulnerableKey, PersistentDataType.BYTE, (byte) 0) == 1);
+            clearPersistentLockout(player);
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        long persistedAt = pdc.getOrDefault(lockedAtKey, PersistentDataType.LONG, System.currentTimeMillis());
+        if (System.currentTimeMillis() - persistedAt > autoReleaseMs) {
+            player.setInvulnerable(pdc.getOrDefault(wasInvulnerableKey, PersistentDataType.BYTE, (byte) 0) == 1);
+            clearPersistentLockout(player);
+            return;
+        }
+        String worldId = player.getPersistentDataContainer().get(worldKey, PersistentDataType.STRING);
+        World world = null;
+        if (worldId != null) {
+            try {
+                world = Bukkit.getWorld(UUID.fromString(worldId));
+            } catch (IllegalArgumentException ignored) {
+                plugin.getLogger().warning("Ignoring invalid persisted lockout world for " + player.getName());
+            }
+        }
+        if (world == null) world = player.getWorld();
+        double x = player.getPersistentDataContainer().getOrDefault(xKey, PersistentDataType.DOUBLE,
+            player.getLocation().getX());
+        double y = player.getPersistentDataContainer().getOrDefault(yKey, PersistentDataType.DOUBLE,
+            player.getLocation().getY());
+        double z = player.getPersistentDataContainer().getOrDefault(zKey, PersistentDataType.DOUBLE,
+            player.getLocation().getZ());
+        Location saved = new Location(world, x, y, z);
+        Location safe = isSafe(saved) ? saved : findSafeLocation(player);
+        lockLocations.put(uuid, safe);
+        lockTimes.put(uuid, persistedAt);
+        previousInvulnerability.put(uuid, player.getPersistentDataContainer().getOrDefault(
+            wasInvulnerableKey, PersistentDataType.BYTE, (byte) 0) == 1);
+        locked.add(uuid);
+        player.setInvulnerable(true);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) player.teleport(safe);
+        });
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -181,9 +286,50 @@ public final class LockoutManager implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        locked.remove(uuid);
-        lockLocations.remove(uuid);
-        lockTimes.remove(uuid);
+        // Persistent state is intentionally retained and reapplied on the next join.
+    }
+
+    private Location findSafeLocation(Player player) {
+        Location current = player.getLocation();
+        if (isSafe(current)) return current.clone();
+        World world = current.getWorld();
+        Location spawn = world.getSpawnLocation();
+        if (isSafe(spawn)) return spawn;
+        int baseX = spawn.getBlockX();
+        int baseZ = spawn.getBlockZ();
+        for (int radius = 1; radius <= 8; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    int x = baseX + dx;
+                    int z = baseZ + dz;
+                    if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+                    for (int dy = 0; dy <= 3; dy++) {
+                        Location candidate = new Location(world, x + 0.5, spawn.getBlockY() + dy, z + 0.5);
+                        if (isSafe(candidate)) return candidate;
+                    }
+                }
+            }
+        }
+        return current.clone();
+    }
+
+    private boolean isSafe(Location location) {
+        if (location.getWorld() == null) return false;
+        World world = location.getWorld();
+        if (!world.isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) return false;
+        return world.getBlockAt(location.getBlockX(), location.getBlockY(), location.getBlockZ()).isPassable()
+            && world.getBlockAt(location.getBlockX(), location.getBlockY() + 1, location.getBlockZ()).isPassable()
+            && world.getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ()).getType().isSolid();
+    }
+
+    private void clearPersistentLockout(Player player) {
+        var pdc = player.getPersistentDataContainer();
+        pdc.remove(lockedKey);
+        pdc.remove(worldKey);
+        pdc.remove(xKey);
+        pdc.remove(yKey);
+        pdc.remove(zKey);
+        pdc.remove(lockedAtKey);
+        pdc.remove(wasInvulnerableKey);
     }
 }

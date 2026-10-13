@@ -1,9 +1,7 @@
 # LegendaryPlugin Pro v1.0.1
 
-**Enterprise-grade Paper 1.21.x anti-cheat, anti-X-ray/ESP, server optimization
-and join-verification platform.** Pro edition — result of extensive research and
-iterative refinement across 12 major versions, incorporating 50 heuristic
-detection checks including ML-style anomaly detection, packet fingerprinting,
+Paper 1.21.x anti-cheat, anti-X-ray/ESP, server optimization and join-verification
+plugin. It includes heuristic and statistical checks, packet fingerprinting,
 behavioral profiling, Monte Carlo consistency analysis, composite heuristic
 fusion engine, TPS-adaptive sensitivity, violation persistence, replay recording,
 threat dashboard, anti-bypass hardening, and modular architecture.
@@ -136,8 +134,8 @@ give a 100% guarantee equivalent to compiling against the actual jars.
 
 ## Changelog
 
-**Pro v1.0.0** (2026-10-04) — ML-powered detection engine, Pro edition:
-- **5 new ML/statistical checks** that go beyond rule-based detection:
+**Pro v1.0.0** (2026-10-04) — statistical and behavioral checks:
+- **4 statistical checks** (the experimental MlDetect check has been removed):
   - **BadSessions** — detects rapid session cycling (join/quit spam) used
     by hacked clients to reset violation state or evade replay recording.
   - **PacketFingerprint** — fingerprints the statistical distribution of
@@ -150,15 +148,12 @@ give a 100% guarantee equivalent to compiling against the actual jars.
   - **MccAnalyze** — Monte Carlo Consistency Analysis. Periodically samples
     each player's movement and combat behavior and runs a statistical
     consistency test against legitimate baselines.
-  - **MlDetect** — lightweight ML-style anomaly detection using a sliding-
-    window feature vector of movement metrics. Computes a confidence score
-    using a distance-based classifier against the player's own rolling baseline.
 - **50 checks total** (up from 45). 144 source files (up from 139).
 - 2500+ simulation scenarios, 100% pass rate.
 - Rebranded as Pro edition.
 - New config sections: `anticheat.checks.badsessions.*`,
   `anticheat.checks.packetfingerprint.*`, `anticheat.checks.behaviorprofile.*`,
-  `anticheat.checks.mccanalyze.*`, `anticheat.checks.mldetect.*`.
+  `anticheat.checks.mccanalyze.*`.
 
 **v2.1.0** (2026-10-04) — composite heuristic detection engine + ultra-optimization:
 - **3 new composite heuristic checks** that fuse multiple weak signals into

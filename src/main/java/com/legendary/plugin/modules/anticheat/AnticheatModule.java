@@ -14,7 +14,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,8 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * optional ProtocolLib-based packet checks. This is the single entry
  * point every {@link Check} talks back to via {@link #flag}.
  *
- * Pro v1.0.0 adds 5 ML/statistical checks: BadSessions, PacketFingerprint,
- * BehaviorProfile, MccAnalyze, MlDetect.
+ * Statistical checks are explicitly confidence-gated and never ban by themselves.
  */
 public final class AnticheatModule implements Module {
 
@@ -35,6 +33,8 @@ public final class AnticheatModule implements Module {
     private final AlertManager alertManager;
     private final BanExecutor banExecutor;
     private final TpsMonitor tpsMonitor;
+    private final PlayerStateTracker playerStateTracker;
+    private final PerfProfiler perfProfiler = new PerfProfiler();
     private final CheckRegistry checkRegistry;
     private final DatabaseManager databaseManager;
     private final WatchManager watchManager;
@@ -57,9 +57,7 @@ public final class AnticheatModule implements Module {
     private FastHealCheck fastHealCheck;               // has a periodic task
     private BehaviorProfileCheck behaviorProfileCheck; // Pro: periodic task
     private MccAnalyzeCheck mccAnalyzeCheck;            // Pro: periodic task
-    private MlDetectCheck mlDetectCheck;               // Pro: periodic task
 
-    private final Map<String, String> escalationConfigCache = new ConcurrentHashMap<>();
     private volatile boolean debugEnabled;
 
     private boolean enabled = false;
@@ -71,6 +69,7 @@ public final class AnticheatModule implements Module {
         this.alertManager = new AlertManager(plugin);
         this.banExecutor = new BanExecutor(plugin);
         this.tpsMonitor = new TpsMonitor(plugin);
+        this.playerStateTracker = new PlayerStateTracker(plugin);
         this.checkRegistry = new CheckRegistry(plugin, this);
         this.databaseManager = new DatabaseManager(plugin);
         this.watchManager = new WatchManager(plugin);
@@ -143,8 +142,6 @@ public final class AnticheatModule implements Module {
         checkRegistry.register(behaviorProfileCheck);
         mccAnalyzeCheck = new MccAnalyzeCheck(this);
         checkRegistry.register(mccAnalyzeCheck);
-        mlDetectCheck = new MlDetectCheck(this);
-        checkRegistry.register(mlDetectCheck);
         antiHungerCheck = (AntiHungerCheck) checkRegistry.get("antihunger").orElse(null);
         fastHealCheck = (FastHealCheck) checkRegistry.get("fastheal").orElse(null);
     }
@@ -161,6 +158,8 @@ public final class AnticheatModule implements Module {
     public AlertManager getAlertManager() { return alertManager; }
     public BanExecutor getBanExecutor() { return banExecutor; }
     public TpsMonitor getTpsMonitor() { return tpsMonitor; }
+    public PlayerStateTracker getPlayerStateTracker() { return playerStateTracker; }
+    public PerfProfiler getPerfProfiler() { return perfProfiler; }
     public CheckRegistry getCheckRegistry() { return checkRegistry; }
     public DatabaseManager getDatabaseManager() { return databaseManager; }
     public WatchManager getWatchManager() { return watchManager; }
@@ -179,6 +178,8 @@ public final class AnticheatModule implements Module {
         org.bukkit.event.HandlerList.unregisterAll(alertManager);
         org.bukkit.event.HandlerList.unregisterAll(watchManager);
         org.bukkit.event.HandlerList.unregisterAll(lockoutManager);
+        org.bukkit.event.HandlerList.unregisterAll(playerStateTracker);
+        lockoutChecks.clear();
         org.bukkit.event.HandlerList.unregisterAll(raidAlertListener);
         org.bukkit.event.HandlerList.unregisterAll(antiSpamListener);
         org.bukkit.event.HandlerList.unregisterAll(clientBrandListener);
@@ -192,6 +193,7 @@ public final class AnticheatModule implements Module {
         violationManager.loadConfigValues();
         violationManager.start();
         Bukkit.getPluginManager().registerEvents(violationManager, plugin);
+        Bukkit.getPluginManager().registerEvents(playerStateTracker, plugin);
         escalationManager.loadConfigValues();
         Bukkit.getPluginManager().registerEvents(escalationManager, plugin);
         alertManager.loadConfigValues();
@@ -234,9 +236,6 @@ public final class AnticheatModule implements Module {
         if (mccAnalyzeCheck != null && mccAnalyzeCheck.isEnabled()) {
             mccAnalyzeCheck.start();
         }
-        if (mlDetectCheck != null && mlDetectCheck.isEnabled()) {
-            mlDetectCheck.start();
-        }
 
         raidAlertListener.loadConfigValues();
         Bukkit.getPluginManager().registerEvents(raidAlertListener, plugin);
@@ -270,6 +269,7 @@ public final class AnticheatModule implements Module {
     public void onDisable() {
         violationManager.stop();
         org.bukkit.event.HandlerList.unregisterAll(violationManager);
+        org.bukkit.event.HandlerList.unregisterAll(playerStateTracker);
         org.bukkit.event.HandlerList.unregisterAll(escalationManager);
         org.bukkit.event.HandlerList.unregisterAll(alertManager);
         tpsMonitor.stop();
@@ -277,7 +277,6 @@ public final class AnticheatModule implements Module {
         if (fastHealCheck != null) { fastHealCheck.stop(); }
         if (behaviorProfileCheck != null) { behaviorProfileCheck.stop(); }
         if (mccAnalyzeCheck != null) { mccAnalyzeCheck.stop(); }
-        if (mlDetectCheck != null) { mlDetectCheck.stop(); }
         checkRegistry.disableAll();
         org.bukkit.event.HandlerList.unregisterAll(raidAlertListener);
         org.bukkit.event.HandlerList.unregisterAll(antiSpamListener);
@@ -292,6 +291,7 @@ public final class AnticheatModule implements Module {
         threatActionManager.stop();
         bypassGuard.stop();
         lockoutManager.stop();
+        lockoutManager.restoreAfterDisable();
         org.bukkit.event.HandlerList.unregisterAll(lockoutManager);
         bungeeIntegration.unregister();
         enabled = false;
@@ -308,35 +308,46 @@ public final class AnticheatModule implements Module {
             .tps(tpsMonitor.getTps())
             .build();
 
-        flagRaw(player, check.getId(), adjustedWeight, detail);
-        hackProfileManager.recordFlag(player.getUniqueId(), check.getId());
-        threatActionManager.onFlag(player.getUniqueId());
-        bypassGuard.onFlagCheck(player, check.getId());
-        maybeRecordReplay(player, check.getId());
-        plugin.getMetrics().counter("anticheat.flags.total").increment();
-        plugin.getMetrics().counter("anticheat.flags." + check.getId()).increment();
-        if (ctx.isLagSuspect()) {
-            plugin.getMetrics().counter("anticheat.flags.lag-suspect").increment();
+        if (processFlag(player, check.getId(), adjustedWeight, detail)) {
+            if (ctx.isLagSuspect()) {
+                plugin.getMetrics().counter("anticheat.flags.lag-suspect").increment();
+            }
         }
     }
 
     /** Entry point for packet-level (non-Check-subclass) detectors like InvalidPacketCheck. */
     public void flagRaw(Player player, String checkId, double weight, String detail) {
-        double vl = violationManager.addViolation(player, checkId, weight);
-        String actions = escalationConfigCache.computeIfAbsent(checkId,
-            id -> plugin.getConfig().getString("anticheat.checks." + id + ".escalation", "alert,alert,alert,kick,ban"));
+        processFlag(player, checkId, weight, detail);
+    }
+
+    private boolean processFlag(Player player, String checkId, double weight, String detail) {
+        boolean bypassed = bypassGuard.shouldBypass(player, checkId);
+        double effectiveWeight = bypassed
+            ? weight * bypassGuard.getBypassVlMultiplier(player) : weight;
+        Double acceptedVl = violationManager.tryAddViolation(player, checkId, effectiveWeight);
+        if (acceptedVl == null || bypassed) return false;
+
+        double vl = acceptedVl;
         String display = checkRegistry.get(checkId).map(Check::getDisplayName).orElse(checkId);
         List<String> activeHacks = hackProfileManager.getActiveHacks(player);
         alertManager.alertViolation(player, display, vl, 0, activeHacks);
         if (debugEnabled) {
             plugin.getLogger().info("[AC-debug] " + player.getName() + " " + checkId + " " + detail);
         }
-        databaseManager.recordViolationAsync(player.getUniqueId().toString(), player.getName(), checkId, weight, vl, detail);
+        databaseManager.recordViolationAsync(player.getUniqueId().toString(), player.getName(), checkId, effectiveWeight, vl, detail);
         watchManager.notifyWatchers(player, display, vl, detail);
-        escalationManager.escalate(player, checkId, display, actions);
-        if (lockoutChecks.contains(checkId) && !lockoutManager.isLocked(player)) {
+        escalationManager.escalate(player, checkId, display, vl, Check.confidenceFor(checkId));
+        if (Check.confidenceFor(checkId) == Check.Confidence.HIGH
+            && lockoutChecks.contains(checkId) && !lockoutManager.isLocked(player)) {
             lockoutManager.lock(player, display + " (VL " + String.format("%.1f", vl) + ")");
         }
+        hackProfileManager.recordFlag(player.getUniqueId(), checkId);
+        threatActionManager.onFlag(player.getUniqueId());
+        bypassGuard.onFlagCheck(player, checkId);
+        maybeRecordReplay(player, checkId);
+        plugin.getMetrics().counter("anticheat.flags.total").increment();
+        plugin.getMetrics().counter("anticheat.flags." + checkId).increment();
+        return true;
     }
 
     private void maybeRecordReplay(Player player, String checkId) {

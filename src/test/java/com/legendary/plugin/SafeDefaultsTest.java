@@ -8,6 +8,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class SafeDefaultsTest {
@@ -24,6 +26,11 @@ class SafeDefaultsTest {
             assertFalse(config.getBoolean("optimization.auto-clear.enabled"));
             assertFalse(config.getBoolean("optimization.modules.hopper-throttle"));
             assertFalse(config.getBoolean("esp.block-obfuscation.enabled"));
+            assertTrue(config.getBoolean("anticheat.safe-mode"));
+            assertTrue(config.getBoolean("anticheat.ban.dry-run"));
+            assertTrue(config.getBoolean("anticheat.ban.requires-staff-confirm"));
+            assertEquals(120, config.getLong("anticheat.lockout.auto-release-seconds"));
+            assertFalse(config.contains("anticheat.checks.mldetect"));
         } catch (java.io.IOException exception) {
             throw new AssertionError("Unable to read default configuration", exception);
         }

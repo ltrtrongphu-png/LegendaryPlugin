@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BypassGuard {
 
     private final LegendaryPlugin plugin;
-    private final Set<String> criticalChecks = new HashSet<>();
+    private volatile Set<String> criticalChecks = Set.of();
     private boolean auditEnabled;
     private boolean opSelfCheckEnabled;
     private int opSelfCheckFlagThreshold;
@@ -61,21 +61,22 @@ public final class BypassGuard {
     }
 
     public void loadConfigValues() {
-        criticalChecks.clear();
+        Set<String> configuredChecks = new HashSet<>();
         for (String id : plugin.getConfig().getStringList("anticheat.anti-bypass.critical-checks")) {
-            criticalChecks.add(id.toLowerCase());
+            configuredChecks.add(id.toLowerCase());
         }
-        if (criticalChecks.isEmpty()) {
-            criticalChecks.add("killaura");
-            criticalChecks.add("aimassist");
-            criticalChecks.add("impossiblehit");
-            criticalChecks.add("movement");
-            criticalChecks.add("phase");
-            criticalChecks.add("timer");
-            criticalChecks.add("blink");
-            criticalChecks.add("blockreach");
-            criticalChecks.add("containerreach");
+        if (configuredChecks.isEmpty()) {
+            configuredChecks.add("killaura");
+            configuredChecks.add("aimassist");
+            configuredChecks.add("impossiblehit");
+            configuredChecks.add("movement");
+            configuredChecks.add("phase");
+            configuredChecks.add("timer");
+            configuredChecks.add("blink");
+            configuredChecks.add("blockreach");
+            configuredChecks.add("containerreach");
         }
+        criticalChecks = Set.copyOf(configuredChecks);
         auditEnabled = plugin.getConfig().getBoolean("anticheat.anti-bypass.audit-enabled", true);
         opSelfCheckEnabled = plugin.getConfig().getBoolean("anticheat.anti-bypass.op-self-check.enabled", true);
         opSelfCheckFlagThreshold = plugin.getConfig().getInt("anticheat.anti-bypass.op-self-check.flag-threshold", 3);
@@ -198,6 +199,6 @@ public final class BypassGuard {
     }
 
     public Set<String> getCriticalChecks() {
-        return new HashSet<>(criticalChecks);
+        return Set.copyOf(criticalChecks);
     }
 }

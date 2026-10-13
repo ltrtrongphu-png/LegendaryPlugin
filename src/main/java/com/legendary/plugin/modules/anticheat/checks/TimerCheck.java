@@ -9,17 +9,16 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Flags an abnormal number of movement packets within one second (Timer/speed-hack client tick manipulation). */
+/** Uses a bounded tick-credit balance so network bursts after lag are tolerated. */
 public final class TimerCheck extends Check implements Listener {
 
-    private final Map<UUID, Deque<Long>> timestamps = new ConcurrentHashMap<>();
-    private int maxMoves;
+    private static final double MAX_CREDIT = 20.0;
+    private final Map<UUID, TimerState> states = new ConcurrentHashMap<>();
+    private int toleratedDebt;
 
     public TimerCheck(AnticheatModule anticheat) {
         super(anticheat, "timer", "Timer");
@@ -28,27 +27,47 @@ public final class TimerCheck extends Check implements Listener {
     @Override
     public void loadConfigValues() {
         enabled = plugin.getConfig().getBoolean(path("enabled"), true);
-        maxMoves = ConfigUtil.getBoundedInt(plugin, path("max-moves"), 24, 10, 100);
+        toleratedDebt = ConfigUtil.getBoundedInt(plugin, path("tolerated-tick-debt"), 5, 1, 20);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        if (shouldSkip(player)) return;
+        if (shouldSkip(player) || event.getTo() == null) return;
+        if (event.getTo().getX() == event.getFrom().getX()
+            && event.getTo().getY() == event.getFrom().getY()
+            && event.getTo().getZ() == event.getFrom().getZ()) return;
+
         long now = System.currentTimeMillis();
-        Deque<Long> deque = timestamps.computeIfAbsent(player.getUniqueId(), k -> new ArrayDeque<>());
-        synchronized (deque) {
-            deque.addLast(now);
-            while (!deque.isEmpty() && now - deque.peekFirst() > 1000) deque.pollFirst();
-            double compensation = anticheat.getTpsMonitor().getCompensationFactor();
-            if (deque.size() > maxMoves * compensation) {
-                flag(player, 1.0, "moves/s=" + deque.size());
+        TimerState state = states.computeIfAbsent(player.getUniqueId(), ignored -> new TimerState(now));
+        double elapsedTicks = Math.max(0.0, (now - state.lastPacketAt) / 50.0);
+        state.credit = Math.min(MAX_CREDIT, state.credit + elapsedTicks) - 1.0;
+        state.lastPacketAt = now;
+
+        if (state.credit < 0) {
+            state.debtStreak++;
+            if (state.debtStreak >= toleratedDebt && state.credit <= -toleratedDebt) {
+                flag(player, 1.0, "tick-credit=" + String.format("%.1f", state.credit));
+                state.credit = 10.0;
+                state.debtStreak = 0;
             }
+        } else {
+            state.debtStreak = Math.max(0, state.debtStreak - 1);
         }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        timestamps.remove(event.getPlayer().getUniqueId());
+        states.remove(event.getPlayer().getUniqueId());
+    }
+
+    private static final class TimerState {
+        private long lastPacketAt;
+        private double credit = MAX_CREDIT;
+        private int debtStreak;
+
+        private TimerState(long now) {
+            lastPacketAt = now;
+        }
     }
 }

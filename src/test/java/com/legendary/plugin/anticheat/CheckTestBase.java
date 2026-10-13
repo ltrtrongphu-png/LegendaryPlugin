@@ -88,6 +88,10 @@ public abstract class CheckTestBase {
         when(anticheat.getPlugin()).thenReturn(plugin);
         when(anticheat.getTpsMonitor()).thenReturn(tpsMonitor);
         when(anticheat.getBypassGuard()).thenReturn(bypassGuard);
+        when(anticheat.getPlayerStateTracker()).thenReturn(mock(
+            com.legendary.plugin.modules.anticheat.PlayerStateTracker.class));
+        when(anticheat.getPerfProfiler()).thenReturn(mock(
+            com.legendary.plugin.modules.anticheat.PerfProfiler.class));
 
         Mockito.doAnswer(inv -> {
             Object checkArg = inv.getArgument(0);
@@ -167,6 +171,7 @@ public abstract class CheckTestBase {
         org.bukkit.block.Block airBlock = mock(org.bukkit.block.Block.class);
         when(airBlock.getType()).thenReturn(org.bukkit.Material.AIR);
         when(loc.getBlock()).thenReturn(airBlock);
+        when(world.getBlockAt(anyInt(), anyInt(), anyInt())).thenReturn(airBlock);
 
         when(loc.distance(any(Location.class))).thenAnswer(inv -> {
             Location other = inv.getArgument(0);

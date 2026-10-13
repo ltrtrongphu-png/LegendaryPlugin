@@ -65,9 +65,37 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
             case "release" -> handleRelease(sender, anticheat, args);
             case "security" -> handleSecurity(sender);
             case "lockdown" -> handleLockdown(sender, args);
+            case "perf" -> handlePerf(sender, anticheat);
+            case "confirmban" -> handleConfirmBan(sender, anticheat, args);
             default -> Text.send(sender, "<red>Unknown subcommand.");
         }
         return true;
+    }
+
+    private void handlePerf(CommandSender sender, AnticheatModule anticheat) {
+        var measurements = anticheat.getPerfProfiler().snapshots();
+        Text.send(sender, "<gray>Check gate profiling (average/max nanoseconds; shared shouldSkip path):");
+        for (var item : measurements.stream().limit(20).toList()) {
+            Text.send(sender, "<gray>- <white>" + item.checkId() + " <gray>calls=" + item.calls()
+                + " avg=" + item.averageNanos() + "ns max=" + item.maxNanos() + "ns");
+        }
+        if (measurements.isEmpty()) Text.send(sender, "<gray>No profiler samples collected yet.");
+    }
+
+    private void handleConfirmBan(CommandSender sender, AnticheatModule anticheat, String[] args) {
+        if (!sender.hasPermission("legendary.anticheat.admin")) {
+            Text.send(sender, "<red>You don't have permission to confirm bans.");
+            return;
+        }
+        if (args.length < 2) {
+            Text.send(sender, "<red>Usage: /legendaryac confirmban <online-player>");
+            return;
+        }
+        if (anticheat.getBanExecutor().confirmPending(args[1])) {
+            Text.send(sender, "<green>Confirmed and executed the pending ban for " + args[1] + ".");
+        } else {
+            Text.send(sender, "<red>No pending ban for that online player.");
+        }
     }
 
     private void handleVl(CommandSender sender, AnticheatModule anticheat, String[] args) {
@@ -339,7 +367,7 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return filter(args[0], List.of("vl", "exempt", "reset", "checkall", "replay", "history", "watch", "profile", "threats", "bypass", "bypass-audit", "release", "security", "lockdown"));
+            return filter(args[0], List.of("vl", "exempt", "reset", "checkall", "replay", "history", "watch", "profile", "threats", "bypass", "bypass-audit", "release", "security", "lockdown", "perf", "confirmban"));
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("lockdown")) {
             return filter(args[1], List.of("on", "off"));

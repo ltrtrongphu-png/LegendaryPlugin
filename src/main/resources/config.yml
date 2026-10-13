@@ -210,6 +210,15 @@ optimization:
 # ---- Anti-cheat (BaB) ------------------------------------------
 anticheat:
   enabled: true
+  # Safe mode records and alerts on violations but does not automatically kick or ban.
+  safe-mode: true
+  flag-cooldown-ms: 1000
+  vl-decay-per-minute: 0.0
+  escalation:
+    thresholds:
+      - { at-vl: 10.0, action: alert }
+      - { at-vl: 25.0, action: kick }
+      - { at-vl: 50.0, action: ban }
   # Check profile preset: lenient | balanced | strict
   # Lenient: reduces flag weights by 40%, disables noisy checks (timer, rotation, blink, guimove)
   # Balanced: default sensitivity, all checks active
@@ -223,16 +232,15 @@ anticheat:
     # counted/logged to the database and escalated every single time regardless of this value -
     # this only throttles how often staff chat / the debug console line repeats itself.
     cooldown-ms: 3000
+    max-per-staff-per-second: 5
     # Default VL threshold shown in alert messages when no per-check threshold is configured.
     default-threshold: 10.0
   violations:
-    # VL does not decay over time within a session — violations persist until manually reset
-    # or the player relogs (which clears all VL). This prevents cheaters from waiting out
-    # their violation record, but the tradeoff is that a false positive early in a long
-    # session stays on that player's record for the whole session. Staff can manually clear
-    # VL via /legendaryac clearvl <player>. The threat-action system's vlComponent weighting
-    # accounts for this stickiness by requiring a minimum per-check VL before any action.
+    # Set vl-decay-per-minute above zero to decay accumulated VL over time.
   ban:
+    dry-run: true
+    requires-staff-confirm: true
+    consensus-window-seconds: 600
     require-plugin: false
     plugin-name: LightBans
     command-template: "ban %player% %duration% %reason%"
@@ -308,7 +316,6 @@ anticheat:
     packetfingerprint: { enabled: true, sample-size: 100, anomaly-threshold: 0.35, exempt-bedrock: true, escalation: "alert,kick,ban" }
     behaviorprofile: { enabled: true, profile-interval-ticks: 20, anomaly-threshold: 0.72, warmup-ticks: 200, exempt-bedrock: true, escalation: "alert,kick,ban" }
     mccanalyze: { enabled: true, check-interval-ticks: 100, flag-threshold: 0.65, exempt-bedrock: true, escalation: "alert,kick" }
-    mldetect: { enabled: true, sample-window-ms: 5000, min-samples: 50, confidence-threshold: 0.85, exempt-bedrock: true, escalation: "alert,kick,ban" }
     # ---- Pv 1.0.1 new checks ----
     backtrack: { enabled: true, history-size: 10, max-position-lag: 3.0, min-move-distance: 0.5, exempt-bedrock: true, escalation: "alert,kick,ban" }
     smoothaura: { enabled: true, sample-size: 15, min-convergence-ratio: 0.8, min-rotation-per-tick: 2.0, flag-cooldown-ms: 3000, exempt-bedrock: true, escalation: "alert,kick,ban" }
@@ -362,19 +369,11 @@ anticheat:
     # damage while waiting for kick/ban. They can't move, break, place, interact,
     # attack, or use commands. Staff with legendary.anticheat.lockout.release
     # can release them via /legendaryac release <player>.
-    auto-release-seconds: 0  # 0 = never auto-release, must be manually released
+    auto-release-seconds: 120
     checks:
-      - killaura
-      - aimassist
       - impossiblehit
-      - phase
-      - timer
-      - blink
-      - ghosthand
-      - disabler
       - invalidpacket
-      - combatheuristics
-      - movementheuristics
+      - badpackets
   anti-bypass:
     audit-enabled: true
     # These check IDs are NEVER bypassed, even if the player has bypass perm.

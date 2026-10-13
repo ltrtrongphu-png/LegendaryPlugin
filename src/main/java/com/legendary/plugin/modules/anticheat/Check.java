@@ -13,11 +13,16 @@ import org.bukkit.event.Listener;
  */
 public abstract class Check implements Listener {
 
+    public enum Confidence {
+        HIGH, MEDIUM, LOW
+    }
+
     protected final LegendaryPlugin plugin;
     protected final AnticheatModule anticheat;
     protected final String id;
     protected final String displayName;
     protected volatile boolean enabled;
+    private volatile boolean exemptBedrock;
 
     protected Check(AnticheatModule anticheat, String id, String displayName) {
         this.anticheat = anticheat;
@@ -29,7 +34,10 @@ public abstract class Check implements Listener {
     public String getId() { return id; }
     public String getDisplayName() { return displayName; }
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean value) { this.enabled = value; }
+    public void setEnabled(boolean value) {
+        this.enabled = value;
+        this.exemptBedrock = plugin.getConfig().getBoolean(path("exempt-bedrock"), false);
+    }
 
     /** Re-reads this check's config.yml section (path: anticheat.checks.<id>.*). */
     public abstract void loadConfigValues();
@@ -39,17 +47,27 @@ public abstract class Check implements Listener {
     }
 
     protected boolean shouldSkip(Player player) {
-        if (!enabled || player.isDead()) return true;
-        if (anticheat.getBypassGuard().shouldBypass(player, id)) return true;
-        if (plugin.getConfig().getBoolean(path("exempt-bedrock"), false)
-            && com.legendary.plugin.util.GeyserExemption.isBedrock(player)) {
-            return true;
+        long startedAt = System.nanoTime();
+        try {
+            if (!enabled || anticheat.getPlayerStateTracker().shouldSkip(player)) return true;
+            return exemptBedrock && com.legendary.plugin.util.GeyserExemption.isBedrock(player);
+        } finally {
+            anticheat.getPerfProfiler().record(id, System.nanoTime() - startedAt);
         }
-        return false;
     }
 
     /** Registers one violation and runs alert/escalation/replay side effects. */
     protected void flag(Player player, double weight, String detail) {
         anticheat.flag(this, player, weight, detail);
+    }
+
+    public static Confidence confidenceFor(String checkId) {
+        return switch (checkId.toLowerCase(java.util.Locale.ROOT)) {
+            case "invalidpacket", "impossiblehit", "badpackets" -> Confidence.HIGH;
+            case "behaviorprofile", "mccanalyze", "packetfingerprint",
+                 "combatheuristics", "movementheuristics", "xray", "clickdistribution",
+                 "smoothaura", "reachprofiling" -> Confidence.LOW;
+            default -> Confidence.MEDIUM;
+        };
     }
 }

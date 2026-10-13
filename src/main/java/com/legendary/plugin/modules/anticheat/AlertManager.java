@@ -10,19 +10,24 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 public final class AlertManager implements Listener {
 
     private final LegendaryPlugin plugin;
     private final Map<String, Long> lastAlertAt = new ConcurrentHashMap<>();
+    private final Map<UUID, Deque<Long>> staffAlertTimes = new ConcurrentHashMap<>();
     private String alertPermission;
     private String alertFormat;
     private String banBroadcastFormat;
     private long cooldownMs;
     private double cachedDefaultThreshold;
     private boolean cachedDebug;
+    private int maxAlertsPerSecond;
 
     public AlertManager(LegendaryPlugin plugin) {
         this.plugin = plugin;
@@ -37,7 +42,10 @@ public final class AlertManager implements Listener {
         cooldownMs = plugin.getConfig().getLong("anticheat.alert.cooldown-ms", 3000);
         cachedDefaultThreshold = plugin.getConfig().getDouble("anticheat.alert.default-threshold", 10.0);
         cachedDebug = plugin.getConfig().getBoolean("debug", false);
+        maxAlertsPerSecond = Math.max(1,
+            plugin.getConfig().getInt("anticheat.alert.max-per-staff-per-second", 5));
         lastAlertAt.clear();
+        staffAlertTimes.clear();
     }
 
     public void alertViolation(Player player, String check, double vl, double threshold) {
@@ -60,14 +68,18 @@ public final class AlertManager implements Listener {
             Placeholder.unparsed("vl", String.format("%.1f", vl)),
             Placeholder.unparsed("threshold", String.format("%.1f", effectiveThreshold)));
         for (Player staff : Bukkit.getOnlinePlayers()) {
-            if (staff.hasPermission(alertPermission)) staff.sendMessage(message);
+            if (staff.hasPermission(alertPermission) && allowStaffAlert(staff, key, now)) {
+                staff.sendMessage(message);
+            }
         }
         if (activeHacks != null && !activeHacks.isEmpty()) {
             String hackList = String.join(", ", activeHacks);
             var hackMessage = Text.of("<gray>[<gold>AC<gray>] <yellow>" + player.getName()
                 + " <red>is actively using: <white>" + hackList);
             for (Player staff : Bukkit.getOnlinePlayers()) {
-                if (staff.hasPermission(alertPermission)) staff.sendMessage(hackMessage);
+                if (staff.hasPermission(alertPermission) && allowStaffAlert(staff, key + ":hacks", now)) {
+                    staff.sendMessage(hackMessage);
+                }
             }
         }
         if (cachedDebug) {
@@ -84,9 +96,20 @@ public final class AlertManager implements Listener {
         }
     }
 
+    private boolean allowStaffAlert(Player staff, String alertKey, long now) {
+        Deque<Long> times = staffAlertTimes.computeIfAbsent(staff.getUniqueId(), ignored -> new ArrayDeque<>());
+        synchronized (times) {
+            while (!times.isEmpty() && now - times.peekFirst() >= 1000L) times.removeFirst();
+            if (times.size() >= maxAlertsPerSecond) return false;
+            times.addLast(now);
+            return true;
+        }
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         String prefix = event.getPlayer().getUniqueId() + ":";
         lastAlertAt.keySet().removeIf(key -> key.startsWith(prefix));
+        staffAlertTimes.remove(event.getPlayer().getUniqueId());
     }
 }

@@ -2,7 +2,8 @@ package com.legendary.plugin.modules.anticheat.physics;
 
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
+
+import java.util.Collection;
 
 /**
  * NEW FEATURE (2026-09-19 merge, scoped-down from the DeepSeek dump's
@@ -29,12 +30,12 @@ public final class VanillaPhysics {
     /** Multiply the check's base horizontal-speed cap by this before comparing. */
     public static double horizontalSpeedMultiplier(Player player) {
         double multiplier = 1.0;
-        PotionEffect speed = player.getPotionEffect(PotionEffectType.SPEED);
+        PotionEffect speed = effect(player, "speed");
         if (speed != null) multiplier *= 1.0 + 0.20 * (speed.getAmplifier() + 1);
-        PotionEffect slow = player.getPotionEffect(PotionEffectType.SLOWNESS);
+        PotionEffect slow = effect(player, "slowness");
         if (slow != null) multiplier *= Math.max(0.0, 1.0 - 0.15 * (slow.getAmplifier() + 1));
 
-        if (player.hasPotionEffect(PotionEffectType.DOLPHINS_GRACE)) multiplier *= 2.0;
+        if (hasEffect(player, "dolphins_grace")) multiplier *= 2.0;
         multiplier *= soulSpeedMultiplier(player);
         multiplier *= depthStriderMultiplier(player);
         multiplier *= swiftSneakMultiplier(player);
@@ -85,13 +86,26 @@ public final class VanillaPhysics {
 
     /** Extra allowed per-tick vertical climb (added to the check's base vertical tolerance) from Jump Boost. */
     public static double extraVerticalTolerance(Player player) {
-        PotionEffect jump = player.getPotionEffect(PotionEffectType.JUMP_BOOST);
+        PotionEffect jump = effect(player, "jump_boost");
         if (jump == null) return 0.0;
         return 0.05 * (jump.getAmplifier() + 1);
     }
 
     /** Slow Falling / Levitation legitimately explain slow or upward "falls" that would otherwise look like flight. */
     public static boolean hasVerticalOverrideEffect(Player player) {
-        return player.hasPotionEffect(PotionEffectType.SLOW_FALLING) || player.hasPotionEffect(PotionEffectType.LEVITATION);
+        return hasEffect(player, "slow_falling") || hasEffect(player, "levitation");
+    }
+
+    public static boolean hasEffect(Player player, String effectKey) {
+        return effect(player, effectKey) != null;
+    }
+
+    private static PotionEffect effect(Player player, String effectKey) {
+        Collection<PotionEffect> effects = player.getActivePotionEffects();
+        if (effects == null) return null;
+        return effects.stream()
+            .filter(effect -> effect.getType().getKey().getKey().equals(effectKey))
+            .findFirst()
+            .orElse(null);
     }
 }

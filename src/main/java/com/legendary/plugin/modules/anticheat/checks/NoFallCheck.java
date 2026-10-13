@@ -10,6 +10,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.vehicle.VehicleExitEvent;
+import org.bukkit.event.player.PlayerVelocityEvent;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.Map;
 import java.util.UUID;
@@ -36,7 +43,7 @@ public final class NoFallCheck extends Check implements Listener {
         Player player = event.getPlayer();
         if (shouldSkip(player)) return;
         UUID uuid = player.getUniqueId();
-        double y = player.getLocation().getY();
+        double y = event.getTo() == null ? event.getFrom().getY() : event.getTo().getY();
         double peak = peakY.getOrDefault(uuid, y);
         if (y > peak) peakY.put(uuid, y);
 
@@ -44,6 +51,8 @@ public final class NoFallCheck extends Check implements Listener {
             if (player.isGliding()) { peakY.put(uuid, y); return; } // elytra landing is legitimate
             double fallDepth = peak - y;
             if (fallDepth >= minFallDistance && player.getFallDistance() <= 0.1f
+                    && !player.isInvulnerable()
+                    && !player.hasPotionEffect(PotionEffectType.RESISTANCE)
                     && !hasFallProtection(player)) {
                 flag(player, 1.0, String.format("fall=%.1f, fallDistance=%.1f", fallDepth, player.getFallDistance()));
             }
@@ -52,7 +61,8 @@ public final class NoFallCheck extends Check implements Listener {
     }
 
     private boolean hasFallProtection(Player player) {
-        if (player.hasPotionEffect(org.bukkit.potion.PotionEffectType.SLOW_FALLING)) return true;
+        if (player.hasPotionEffect(PotionEffectType.SLOW_FALLING)
+                || player.hasPotionEffect(PotionEffectType.LEVITATION)) return true;
         var boots = player.getInventory().getBoots();
         if (boots != null && boots.getType() != org.bukkit.Material.AIR
                 && boots.containsEnchantment(org.bukkit.enchantments.Enchantment.FEATHER_FALLING)) {
@@ -67,7 +77,9 @@ public final class NoFallCheck extends Check implements Listener {
                 || atFeet == Material.SCAFFOLDING) {
             return true;
         }
-        Material below = player.getLocation().clone().subtract(0, 0.5, 0).getBlock().getType();
+        var location = player.getLocation();
+        Material below = location.getWorld().getBlockAt(location.getBlockX(),
+            location.getBlockY() - 1, location.getBlockZ()).getType();
         if (below == Material.SLIME_BLOCK || below == Material.HONEY_BLOCK
                 || below == Material.HAY_BLOCK || below.name().endsWith("_BED")) {
             return true;
@@ -75,7 +87,7 @@ public final class NoFallCheck extends Check implements Listener {
         return false;
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onDamage(EntityDamageEvent event) {
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL && event.getEntity() instanceof Player player) {
             peakY.put(player.getUniqueId(), player.getLocation().getY());
@@ -87,6 +99,38 @@ public final class NoFallCheck extends Check implements Listener {
         if (event.getTo() != null) {
             peakY.put(event.getPlayer().getUniqueId(), event.getTo().getY());
         }
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        peakY.remove(event.getEntity().getUniqueId());
+    }
+
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent event) {
+        peakY.put(event.getPlayer().getUniqueId(), event.getRespawnLocation().getY());
+    }
+
+    @EventHandler
+    public void onGameModeChange(PlayerGameModeChangeEvent event) {
+        peakY.put(event.getPlayer().getUniqueId(), event.getPlayer().getLocation().getY());
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        peakY.put(event.getPlayer().getUniqueId(), event.getPlayer().getLocation().getY());
+    }
+
+    @EventHandler
+    public void onVehicleExit(VehicleExitEvent event) {
+        if (event.getExited() instanceof Player player) {
+            peakY.put(player.getUniqueId(), player.getLocation().getY());
+        }
+    }
+
+    @EventHandler
+    public void onVelocity(PlayerVelocityEvent event) {
+        peakY.put(event.getPlayer().getUniqueId(), event.getPlayer().getLocation().getY());
     }
 
     @EventHandler

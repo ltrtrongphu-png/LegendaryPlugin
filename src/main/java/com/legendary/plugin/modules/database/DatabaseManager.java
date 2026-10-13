@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Thin async wrapper around a JDBC connection (SQLite by default, MySQL
@@ -30,6 +32,7 @@ public final class DatabaseManager {
     private volatile boolean mysql;
     private final ReentrantLock writeLock = new ReentrantLock();
     private final ConcurrentLinkedQueue<ViolationRow> pendingViolations = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<ViolationLevelRow> pendingViolationLevels = new ConcurrentLinkedQueue<>();
     private java.util.concurrent.ScheduledExecutorService batchFlushExecutor;
 
     public DatabaseManager(LegendaryPlugin plugin) {
@@ -96,16 +99,51 @@ public final class DatabaseManager {
                     created_at BIGINT NOT NULL
                 )
                 """);
+            statement.execute("""
+                CREATE TABLE IF NOT EXISTS anticheat_violation_levels (
+                    player_uuid VARCHAR(36) NOT NULL,
+                    check_name VARCHAR(64) NOT NULL,
+                    vl DOUBLE NOT NULL,
+                    updated_at BIGINT NOT NULL,
+                    PRIMARY KEY (player_uuid, check_name)
+                )
+                """);
             statement.execute("CREATE INDEX IF NOT EXISTS idx_violations_player ON anticheat_violations(player_uuid, created_at)");
         }
     }
 
     public record ViolationRecord(String playerName, String checkName, double weight, double vlAfter, String detail, long createdAt) {}
     private record ViolationRow(String uuid, String name, String check, double weight, double vlAfter, String detail, long createdAt) {}
+    private record ViolationLevelRow(String uuid, String check, double vl, long updatedAt) {}
 
     /** Queues a violation for batch insert. Non-blocking, always off the main thread. */
     public void recordViolationAsync(String uuid, String name, String check, double weight, double vlAfter, String detail) {
         pendingViolations.add(new ViolationRow(uuid, name, check, weight, vlAfter, detail, System.currentTimeMillis()));
+    }
+
+    public void saveViolationLevelAsync(String uuid, String check, double vl) {
+        pendingViolationLevels.add(new ViolationLevelRow(uuid, check, vl, System.currentTimeMillis()));
+    }
+
+    public void loadViolationLevelsAsync(String uuid, Consumer<Map<String, Double>> callback) {
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            Map<String, Double> levels = new HashMap<>();
+            Connection c = connection;
+            if (c == null) return;
+            writeLock.lock();
+            try (var stmt = c.prepareStatement(
+                    "SELECT check_name, vl FROM anticheat_violation_levels WHERE player_uuid = ?")) {
+                stmt.setString(1, uuid);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) levels.put(rs.getString("check_name"), rs.getDouble("vl"));
+                }
+            } catch (SQLException e) {
+                plugin.getLogger().warning("Failed to load violation levels: " + e.getMessage());
+            } finally {
+                writeLock.unlock();
+            }
+            plugin.getServer().getScheduler().runTask(plugin, () -> callback.accept(levels));
+        });
     }
 
     private void startBatchFlush() {
@@ -118,30 +156,53 @@ public final class DatabaseManager {
     }
 
     private void flushViolations() {
-        if (pendingViolations.isEmpty()) return;
+        if (pendingViolations.isEmpty() && pendingViolationLevels.isEmpty()) return;
         Connection c = connection;
         if (c == null) return;
         List<ViolationRow> batch = new ArrayList<>(128);
+        List<ViolationLevelRow> levelBatch = new ArrayList<>(128);
         ViolationRow row;
         while ((row = pendingViolations.poll()) != null) batch.add(row);
-        if (batch.isEmpty()) return;
+        ViolationLevelRow levelRow;
+        while ((levelRow = pendingViolationLevels.poll()) != null) levelBatch.add(levelRow);
+        if (batch.isEmpty() && levelBatch.isEmpty()) return;
 
         writeLock.lock();
-        try (var stmt = c.prepareStatement(
-                "INSERT INTO anticheat_violations (player_uuid, player_name, check_name, weight, vl_after, detail, created_at) VALUES (?,?,?,?,?,?,?)")) {
-            for (ViolationRow r : batch) {
-                stmt.setString(1, r.uuid());
-                stmt.setString(2, r.name());
-                stmt.setString(3, r.check());
-                stmt.setDouble(4, r.weight());
-                stmt.setDouble(5, r.vlAfter());
-                stmt.setString(6, r.detail());
-                stmt.setLong(7, r.createdAt());
-                stmt.addBatch();
+        try {
+            try (var stmt = c.prepareStatement(
+                    "INSERT INTO anticheat_violations (player_uuid, player_name, check_name, weight, vl_after, detail, created_at) VALUES (?,?,?,?,?,?,?)")) {
+                for (ViolationRow r : batch) {
+                    stmt.setString(1, r.uuid());
+                    stmt.setString(2, r.name());
+                    stmt.setString(3, r.check());
+                    stmt.setDouble(4, r.weight());
+                    stmt.setDouble(5, r.vlAfter());
+                    stmt.setString(6, r.detail());
+                    stmt.setLong(7, r.createdAt());
+                    stmt.addBatch();
+                }
+                stmt.executeBatch();
             }
-            stmt.executeBatch();
+            try (var update = c.prepareStatement(
+                    "UPDATE anticheat_violation_levels SET vl = ?, updated_at = ? WHERE player_uuid = ? AND check_name = ?");
+                 var insert = c.prepareStatement(
+                    "INSERT INTO anticheat_violation_levels (vl, updated_at, player_uuid, check_name) VALUES (?,?,?,?)")) {
+                for (ViolationLevelRow r : levelBatch) {
+                    update.setDouble(1, r.vl());
+                    update.setLong(2, r.updatedAt());
+                    update.setString(3, r.uuid());
+                    update.setString(4, r.check());
+                    if (update.executeUpdate() == 0) {
+                        insert.setDouble(1, r.vl());
+                        insert.setLong(2, r.updatedAt());
+                        insert.setString(3, r.uuid());
+                        insert.setString(4, r.check());
+                        insert.executeUpdate();
+                    }
+                }
+            }
         } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to flush " + batch.size() + " violations: " + e.getMessage());
+            plugin.getLogger().warning("Failed to flush anticheat data: " + e.getMessage());
         } finally {
             writeLock.unlock();
         }

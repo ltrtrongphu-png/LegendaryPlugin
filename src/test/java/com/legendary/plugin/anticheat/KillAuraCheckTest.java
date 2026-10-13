@@ -128,6 +128,25 @@ class KillAuraCheckTest extends CheckTestBase {
     }
 
     @Test
+    @DisplayName("Sweep damage is not treated as an individual aura attack")
+    void sweepDamageDoesNotFlag() {
+        World world = mock(World.class);
+        Location attackerLoc = makeLocation(world, 0, 64, 0);
+        Location targetLoc = makeLocation(world, 0, 64, 3.0);
+        Player attacker = makePlayer(UUID.randomUUID(), "SweepPlayer", world, attackerLoc);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getWorld()).thenReturn(world);
+        when(target.getEyeLocation()).thenReturn(targetLoc);
+        when(target.getUniqueId()).thenReturn(UUID.randomUUID());
+        EntityDamageByEntityEvent event = makeDamageEvent(attacker, target);
+        when(event.getCause()).thenReturn(org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK);
+
+        check.onAttack(event);
+
+        assertFalse(flagged("killaura"));
+    }
+
+    @Test
     @DisplayName("Cross-world attack should NOT flag (different worlds)")
     void crossWorldNoFlag() {
         World world1 = mock(World.class);

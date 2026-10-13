@@ -9,6 +9,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.legendary.plugin.LegendaryPlugin;
 import com.legendary.plugin.modules.anticheat.AnticheatModule;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -26,9 +27,11 @@ public final class DisablerCheck extends PacketAdapter {
     private final Map<UUID, Long> pendingTransactionSentAt = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> missedTransactions = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> wrongIdTransactions = new ConcurrentHashMap<>();
+    private final Map<UUID, Boolean> bypassCache = new ConcurrentHashMap<>();
     private final AtomicInteger nextTransactionId = new AtomicInteger(1);
     private BukkitTask probeTask;
     private BukkitTask timeoutTask;
+    private BukkitTask evaluationTask;
     private boolean enabled;
     private long probeIntervalTicks;
     private long rttThresholdMs;
@@ -57,21 +60,26 @@ public final class DisablerCheck extends PacketAdapter {
         protocolManager.addPacketListener(this);
         probeTask = plugin.getServer().getScheduler().runTaskTimer(plugin, this::sendProbes, 20L, probeIntervalTicks);
         timeoutTask = plugin.getServer().getScheduler().runTaskTimer(plugin, this::checkTimeouts, 40L, 20L);
+        evaluationTask = plugin.getServer().getScheduler().runTaskTimer(plugin, this::evaluateWrongIds, 20L, 20L);
     }
 
     public void unregister() {
         if (protocolManager != null) protocolManager.removePacketListener(this);
         if (probeTask != null) { probeTask.cancel(); probeTask = null; }
         if (timeoutTask != null) { timeoutTask.cancel(); timeoutTask = null; }
+        if (evaluationTask != null) { evaluationTask.cancel(); evaluationTask = null; }
         pendingTransactionId.clear();
         pendingTransactionSentAt.clear();
         missedTransactions.clear();
         wrongIdTransactions.clear();
+        bypassCache.clear();
     }
 
     private void sendProbes() {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            if (anticheat.getBypassGuard().shouldBypass(player, "disabler")) continue;
+            boolean bypass = anticheat.getBypassGuard().shouldBypass(player, "disabler");
+            bypassCache.put(player.getUniqueId(), bypass);
+            if (bypass) continue;
             UUID uuid = player.getUniqueId();
             if (pendingTransactionId.containsKey(uuid)) continue;
 
@@ -95,7 +103,9 @@ public final class DisablerCheck extends PacketAdapter {
     private void checkTimeouts() {
         long now = System.currentTimeMillis();
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            if (anticheat.getBypassGuard().shouldBypass(player, "disabler")) continue;
+            boolean bypass = anticheat.getBypassGuard().shouldBypass(player, "disabler");
+            bypassCache.put(player.getUniqueId(), bypass);
+            if (bypass) continue;
             UUID uuid = player.getUniqueId();
             Long sentAt = pendingTransactionSentAt.get(uuid);
             if (sentAt == null) continue;
@@ -117,7 +127,7 @@ public final class DisablerCheck extends PacketAdapter {
     public void onPacketReceiving(PacketEvent event) {
         if (event.getPacketType() != PacketType.Play.Client.PONG) return;
         Player player = event.getPlayer();
-        if (player == null || anticheat.getBypassGuard().shouldBypass(player, "disabler")) return;
+        if (player == null || Boolean.TRUE.equals(bypassCache.get(player.getUniqueId()))) return;
         UUID uuid = player.getUniqueId();
 
         Short expectedId = pendingTransactionId.remove(uuid);
@@ -130,11 +140,7 @@ public final class DisablerCheck extends PacketAdapter {
             int receivedId = readVal;
             if (receivedId != expectedId) {
                 int wrong = wrongIdTransactions.merge(uuid, 1, Integer::sum);
-                if (wrong >= requiredWrongIdToFlag) {
-                    anticheat.flagRaw(player, "disabler", 2.0,
-                        "wrongTransactionId expected=" + expectedId + " got=" + receivedId + " count=" + wrong);
-                    wrongIdTransactions.put(uuid, 0);
-                }
+                if (wrong >= requiredWrongIdToFlag) wrongIdTransactions.put(uuid, wrong);
             } else {
                 missedTransactions.computeIfPresent(uuid, (k, v) -> Math.max(0, v - 1));
                 wrongIdTransactions.computeIfPresent(uuid, (k, v) -> Math.max(0, v - 1));
@@ -142,5 +148,19 @@ public final class DisablerCheck extends PacketAdapter {
         } catch (Exception ex) {
             plugin.debug("DisablerCheck failed to read pong: " + ex.getMessage());
         }
+    }
+
+    private void evaluateWrongIds() {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            UUID uuid = player.getUniqueId();
+            boolean bypass = anticheat.getBypassGuard().shouldBypass(player, "disabler");
+            bypassCache.put(uuid, bypass);
+            int wrong = wrongIdTransactions.getOrDefault(uuid, 0);
+            if (!bypass && wrong >= requiredWrongIdToFlag) {
+                anticheat.flagRaw(player, "disabler", 2.0, "wrongTransactionResponses=" + wrong);
+                wrongIdTransactions.put(uuid, 0);
+            }
+        }
+        bypassCache.keySet().removeIf(uuid -> Bukkit.getPlayer(uuid) == null);
     }
 }

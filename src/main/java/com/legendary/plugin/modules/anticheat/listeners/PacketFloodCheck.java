@@ -8,56 +8,77 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
 import com.legendary.plugin.LegendaryPlugin;
 import com.legendary.plugin.modules.anticheat.AnticheatModule;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Flags a player whose client is flooding the server with far more
- * packets per second than any real client would produce (packet-flood /
- * network-exploit style attacks). Requires ProtocolLib. Ported from
- * BaB.PacketFloodCheck.
- */
+/** Counts a narrow set of client packets on Netty; threshold checks run on the server thread. */
 public final class PacketFloodCheck extends PacketAdapter {
 
+    private static final Set<PacketType> OBSERVED_PACKETS = Set.of(
+        PacketType.Play.Client.POSITION, PacketType.Play.Client.POSITION_LOOK,
+        PacketType.Play.Client.LOOK, PacketType.Play.Client.FLYING,
+        PacketType.Play.Client.USE_ENTITY, PacketType.Play.Client.ARM_ANIMATION,
+        PacketType.Play.Client.BLOCK_DIG, PacketType.Play.Client.BLOCK_PLACE,
+        PacketType.Play.Client.WINDOW_CLICK);
     private final AnticheatModule anticheat;
     private final Map<UUID, AtomicInteger> counters = new ConcurrentHashMap<>();
+    private final Map<UUID, Boolean> bypassCache = new ConcurrentHashMap<>();
     private volatile int maxPerSecond = 400;
-    private org.bukkit.scheduler.BukkitTask resetTask;
+    private BukkitTask evaluationTask;
 
     public PacketFloodCheck(LegendaryPlugin plugin, AnticheatModule anticheat) {
-        // ✅ FIXED: getInstance() trước khi gọi values()
-        super(plugin, ListenerPriority.MONITOR, PacketType.Play.Client.getInstance().values());
+        super(plugin, ListenerPriority.NORMAL, OBSERVED_PACKETS);
         this.anticheat = anticheat;
     }
 
     public void loadConfigValues() {
-        maxPerSecond = anticheat.getPlugin().getConfig().getInt("anticheat.checks.packetflood.max-per-second", 400);
+        maxPerSecond = Math.max(20,
+            anticheat.getPlugin().getConfig().getInt("anticheat.checks.packetflood.max-per-second", 400));
     }
 
     public void register() {
         ProtocolManager manager = ProtocolLibrary.getProtocolManager();
         manager.addPacketListener(this);
-        resetTask = anticheat.getPlugin().getServer().getScheduler().runTaskTimer(
-            anticheat.getPlugin(), counters::clear, 20L, 20L);
+        evaluationTask = anticheat.getPlugin().getServer().getScheduler().runTaskTimer(
+            anticheat.getPlugin(), this::evaluateWindow, 20L, 20L);
     }
 
     public void unregister() {
         ProtocolLibrary.getProtocolManager().removePacketListener(this);
-        if (resetTask != null) { resetTask.cancel(); resetTask = null; }
+        if (evaluationTask != null) { evaluationTask.cancel(); evaluationTask = null; }
         counters.clear();
+        bypassCache.clear();
     }
 
     @Override
     public void onPacketReceiving(PacketEvent event) {
         Player player = event.getPlayer();
-        if (player == null || anticheat.getBypassGuard().shouldBypass(player, "packetflood")) return;
-        int count = counters.computeIfAbsent(player.getUniqueId(), k -> new AtomicInteger()).incrementAndGet();
-        if (count >= maxPerSecond + 1) { // fire when over the limit
-            anticheat.flagRaw(player, "packetflood", 1.0, "packets/s=" + count);
+        if (player == null) return;
+        UUID uuid = player.getUniqueId();
+        if (!Boolean.TRUE.equals(bypassCache.get(uuid))) {
+            counters.computeIfAbsent(uuid, ignored -> new AtomicInteger()).incrementAndGet();
         }
+    }
+
+    private void evaluateWindow() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            UUID uuid = player.getUniqueId();
+            boolean bypass = anticheat.getBypassGuard().shouldBypass(player, "packetflood");
+            bypassCache.put(uuid, bypass);
+            AtomicInteger counter = counters.get(uuid);
+            int count = counter == null ? 0 : counter.getAndSet(0);
+            if (!bypass && count > maxPerSecond) {
+                anticheat.flagRaw(player, "packetflood", 1.0, "packets/s=" + count);
+            }
+        }
+        counters.keySet().removeIf(uuid -> Bukkit.getPlayer(uuid) == null);
+        bypassCache.keySet().removeIf(uuid -> Bukkit.getPlayer(uuid) == null);
     }
 }
