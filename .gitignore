@@ -1,0 +1,4 @@
+node_modules/
+.env
+target/
+.mvn/wrapper/apache-maven-3.9.11-bin.tar.gz

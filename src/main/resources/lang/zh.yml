@@ -1,0 +1,61 @@
+# LegendaryPlugin - 中文 (Chinese locale)
+# Copyright (c) WhiteBlackMC709. All rights reserved.
+
+general:
+  prefix: "LegendaryPlugin"
+  language-name: "中文"
+  no-permission: "<red>你没有权限使用此命令。"
+  player-only: "<red>此命令只能由玩家使用。"
+  unknown-subcommand: "<red>未知子命令。使用 <white>/legendary help</white> 获取帮助。"
+  reloaded: "<green>配置已成功重新加载。"
+
+optimization:
+  level-change: "<gray>[<gradient:#38BDF8:#A855F7>Legendary</gradient>] <white>TPS %tps% - 等级 %from% -> <yellow>%to%"
+  clear-warning: "<yellow>[LegendaryPlugin] <white>%seconds%秒后清理掉落物/怪物。"
+  clear-result: "<green>已清理 <white>%count%<green> 个实体。"
+  entities-unloaded: "[Optimization] 已卸载 %count% 个空区块以释放内存（严重延迟）。"
+
+antiafkbot:
+  prefix: "<gray>[<red>AntiAfkBot<gray>] "
+  kick-message: "<red>你因挂机（AFK）已被踢出。"
+  kick-broadcast: "<yellow>%player% <gray>因挂机被踢出。"
+  check-started: "<gray>AntiAfkBot检查已开始。正在监控 %count% 名玩家。"
+  exempt: "<green>%player% <gray>已豁免AntiAfkBot检查。"
+
+antichunkban:
+  prefix: "<gray>[<red>AntiChunkBan<gray>] "
+  quarantine-warning: "<red>[AntiChunkBan] <gray>该区块已被隔离以确保安全。你无法进入。"
+  danger-detected: "<red>[AntiChunkBan] <gray>检测到危险区块！正在将你转移到安全区域。"
+  teleport-cancelled: "<red>[AntiChunkBan] <gray>传送目的地在隔离区块中。传送已取消。"
+  teleport-redirected: "<red>[AntiChunkBan] <gray>传送目的地危险！正在重定向到安全区域。"
+  login-redirected: "<red>[AntiChunkBan] <gray>你的登录位置不安全。你已被转移到安全区域。"
+
+antiinfinitewater:
+  prefix: "<gray>[<red>AntiInfiniteWater<gray>] "
+  blocked: "<red>[AntiInfiniteWater] <gray>此服务器不允许创建无限水源。"
+  rate-limited: "<red>[AntiInfiniteWater] <gray>你放水太快了。请放慢速度。"
+
+anticheat:
+  alert-format: "<gray>[<gold>AC<gray>] <yellow>%player% <gray>触犯 <white>%check% <gray>(VL <red>%vl%/%threshold%)"
+  ban-broadcast: "<red>%player% <gray>因 <white>%reason% <gray>被封禁"
+  lockout: "<red>%player% <gray>因可疑行为被冻结。"
+  lockout-released: "<green>%player% <gray>已被解除冻结。"
+
+verification:
+  kick-too-many: "<red>来自您网络的连接尝试过多。请稍后再试。"
+  prompt-move: "<yellow>请移动以验证您是人类。"
+  prompt-click: "<yellow>请踩上压力板以验证。"
+  verified: "<green>验证完成。欢迎！"
+  timeout: "<red>验证超时。请重新连接。"
+
+security:
+  lockdown-enabled: "<red>DDoS锁定已启用。仅白名单IP可加入。"
+  lockdown-disabled: "<green>DDoS锁定已禁用。"
+  debugger-detected: "<red>检测到调试器 — 反作弊进入锁定模式。"
+  tampering-detected: "<red>检测到代码篡改 — 反作弊进入锁定模式。"
+
+modules:
+  enabled: "<green>模块 <white>%module% <green>已启用。"
+  disabled: "<yellow>模块 <white>%module% <yellow>已禁用。"
+  reloaded: "<green>模块 <white>%module% <green>已重新加载。"
+  not-found: "<red>未找到模块 <white>%module%<red>。"
