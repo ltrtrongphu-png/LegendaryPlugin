@@ -17,11 +17,15 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /** /legendaryac - anti-cheat administration: violation levels, resets, replay review, hack profiles. */
 public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
@@ -63,7 +67,7 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
             case "bypass" -> handleBypass(sender, anticheat, args);
             case "bypass-audit" -> handleBypassAudit(sender, anticheat, args);
             case "release" -> handleRelease(sender, anticheat, args);
-            case "security" -> handleSecurity(sender);
+            case "security" -> handleSecurity(sender, args);
             case "lockdown" -> handleLockdown(sender, args);
             case "perf" -> handlePerf(sender, anticheat);
             case "confirmban" -> handleConfirmBan(sender, anticheat, args);
@@ -92,7 +96,7 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (anticheat.getBanExecutor().confirmPending(args[1])) {
-            Text.send(sender, "<green>Confirmed and executed the pending ban for " + args[1] + ".");
+            sender.sendMessage(Component.text("Confirmed and executed the pending ban for " + args[1] + "."));
         } else {
             Text.send(sender, "<red>No pending ban for that online player.");
         }
@@ -100,11 +104,12 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
 
     private void handleVl(CommandSender sender, AnticheatModule anticheat, String[] args) {
         if (args.length < 2) { Text.send(sender, "<red>Usage: /legendaryac vl <player> [check]"); return; }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-        if (!(target instanceof Player online)) { Text.send(sender, "<red>Player must be online."); return; }
+        Player online = Bukkit.getPlayerExact(args[1]);
+        if (online == null) { Text.send(sender, "<red>Player must be online."); return; }
         if (args.length >= 3) {
             double vl = anticheat.getViolationManager().getVl(online, args[2].toLowerCase());
-            Text.send(sender, "<gray>" + args[1] + " " + args[2] + " VL: <white>" + String.format("%.1f", vl));
+            sender.sendMessage(Component.text(online.getName() + " " + args[2] + " VL: "
+                + String.format("%.1f", vl)));
         } else {
             for (Check check : anticheat.getCheckRegistry().all().values()) {
                 double vl = anticheat.getViolationManager().getVl(online, check.getId());
@@ -115,14 +120,14 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
 
     private void handleReset(CommandSender sender, AnticheatModule anticheat, String[] args) {
         if (args.length < 2) { Text.send(sender, "<red>Usage: /legendaryac reset <player> [check]"); return; }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-        if (!(target instanceof Player online)) { Text.send(sender, "<red>Player must be online."); return; }
+        Player online = Bukkit.getPlayerExact(args[1]);
+        if (online == null) { Text.send(sender, "<red>Player must be online."); return; }
         if (args.length >= 3) {
             anticheat.getViolationManager().resetCheck(online, args[2].toLowerCase());
         } else {
             anticheat.getViolationManager().resetAll(online);
         }
-        Text.send(sender, "<green>Reset violations for " + args[1] + ".");
+        sender.sendMessage(Component.text("Reset violations for " + online.getName() + "."));
     }
 
     private void handleCheckAll(CommandSender sender, AnticheatModule anticheat, String[] args) {
@@ -144,9 +149,9 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) { Text.send(sender, "<red>Player must be online."); return; }
         boolean nowWatching = anticheat.getWatchManager().toggleWatch(staff, target);
-        Text.send(sender, nowWatching
-            ? "<green>Now watching <white>" + target.getName() + "<green> - you'll get detailed alerts for every flag."
-            : "<yellow>Stopped watching <white>" + target.getName() + "<yellow>.");
+        sender.sendMessage(Component.text(nowWatching
+            ? "Now watching " + target.getName() + " - you'll get detailed alerts for every flag."
+            : "Stopped watching " + target.getName() + "."));
     }
 
     private void handleHistory(CommandSender sender, AnticheatModule anticheat, String[] args) {
@@ -155,20 +160,24 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
             Text.send(sender, "<red>Database isn't connected yet - try again in a moment.");
             return;
         }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-        int limit = args.length >= 3 ? parseIntOr(args[2], 15) : 15;
-        Text.send(sender, "<gray>Fetching violation history for <white>" + args[1] + "<gray>...");
-        anticheat.getDatabaseManager().getRecentViolationsAsync(target.getUniqueId().toString(), limit, rows -> {
+        int limit = Math.max(1, Math.min(100, args.length >= 3 ? parseIntOr(args[2], 15) : 15));
+        resolveOfflineUuid(sender, args[1], uuid -> {
+            Text.send(sender, "<gray>Fetching violation history for <white><target><gray>...",
+                Text.placeholder("target", args[1]));
+            anticheat.getDatabaseManager().getRecentViolationsAsync(uuid.toString(), limit, rows -> {
             if (rows.isEmpty()) {
-                Text.send(sender, "<gray>No recorded history for " + args[1] + ".");
+                Text.send(sender, "<gray>No recorded history for <target>.",
+                    Text.placeholder("target", args[1]));
                 return;
             }
-            Text.send(sender, "<gray>Last " + rows.size() + " violation(s) for <white>" + args[1] + "<gray>:");
+            Text.send(sender, "<gray>Last " + rows.size() + " violation(s) for <white><target><gray>:",
+                Text.placeholder("target", args[1]));
             for (var row : rows) {
-                Text.send(sender, String.format("<gray>- <white>%s <gray>weight=%.1f vl=%.1f <dark_gray>(%s)",
+                sender.sendMessage(Component.text(String.format("- %s weight=%.1f vl=%.1f (%s)",
                     row.checkName(), row.weight(), row.vlAfter(),
-                    java.time.Instant.ofEpochMilli(row.createdAt()).toString()));
+                    java.time.Instant.ofEpochMilli(row.createdAt()).toString())));
             }
+            });
         });
     }
 
@@ -222,14 +231,22 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
         var guard = anticheat.getBypassGuard();
         if (args[2].equalsIgnoreCase("revoke")) {
             guard.revokeTemporaryBypass(target.getUniqueId());
-            Text.send(sender, "<yellow>Revoked temporary bypass for <white>" + target.getName() + "<yellow>.");
+            Text.send(sender, "<yellow>Revoked temporary bypass for <white><target><yellow>.",
+                Text.placeholder("target", target.getName()));
             return;
         }
         try {
             long seconds = Long.parseLong(args[2]);
+            if (seconds < 1 || seconds > 3600) {
+                Text.send(sender, "<red>Bypass duration must be between 1 and 3600 seconds.");
+                return;
+            }
             guard.grantTemporaryBypass(target.getUniqueId(), seconds);
-            Text.send(sender, "<green>Granted temporary bypass to <white>" + target.getName()
-                + " <green>for <white>" + seconds + "s<green>. Critical checks still active.");
+            plugin.getLogger().warning("[Bypass Audit] " + sender.getName() + " granted "
+                + seconds + "s bypass to " + target.getUniqueId() + " (" + target.getName() + ").");
+            Text.send(sender, "<green>Granted temporary bypass to <white><target>"
+                + " <green>for <white>" + seconds + "s<green>. Critical checks still active.",
+                Text.placeholder("target", target.getName()));
         } catch (NumberFormatException e) {
             Text.send(sender, "<red>Seconds must be a number, or 'revoke'.");
         }
@@ -275,21 +292,34 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
         Text.send(sender, "<green>Released <white>" + target.getName() + "<green> from lockout.");
     }
 
-    private void handleSecurity(CommandSender sender) {
+    private void handleSecurity(CommandSender sender, String[] args) {
         var reOpt = plugin.getModule("anti-reverse-engineering");
+        if (args.length >= 2 && args[1].equalsIgnoreCase("unlock")) {
+            if (!sender.hasPermission("legendary.security.unlock")) {
+                Text.send(sender, "<red>You don't have permission to unlock the integrity lockdown.");
+                return;
+            }
+            if (reOpt.isPresent() && reOpt.get() instanceof AntiReverseEngineeringModule re
+                && re.getManager().unlock()) {
+                Text.send(sender, "<green>Integrity lockdown cleared; anti-cheat re-enabled.");
+            } else {
+                Text.send(sender, "<yellow>No integrity lockdown is active.");
+            }
+            return;
+        }
         var ddosOpt = plugin.getModule("anti-ddos");
         Text.send(sender, "<gray>============================================");
         Text.send(sender, "<gold>Security Status");
         Text.send(sender, "<gray>============================================");
         if (reOpt.isPresent() && reOpt.get() instanceof AntiReverseEngineeringModule re) {
-            Text.send(sender, "<gray>Anti-Reverse-Engineering: "
+            Text.send(sender, "<gray>Integrity Check: "
                 + (re.isEnabled() ? "<green>Active" : "<red>Disabled"));
             Text.send(sender, "<gray>  Status: <white>" + re.getManager().getStatusSummary());
             Text.send(sender, "<gray>  Lockdown: " + (re.getManager().isLockdownMode() ? "<red>YES" : "<green>No"));
             Text.send(sender, "<gray>  Debugger: " + (re.getManager().isDebuggerDetected() ? "<red>DETECTED" : "<green>Clear"));
             Text.send(sender, "<gray>  Tampering: " + (re.getManager().isTamperingDetected() ? "<red>DETECTED" : "<green>Clear"));
         } else {
-            Text.send(sender, "<gray>Anti-Reverse-Engineering: <red>Not loaded");
+            Text.send(sender, "<gray>Integrity Check: <red>Not loaded");
         }
         if (ddosOpt.isPresent() && ddosOpt.get() instanceof AntiDdosModule ddos) {
             Text.send(sender, "<gray>Anti-DDoS: "
@@ -330,6 +360,30 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return def; }
     }
 
+    private void resolveOfflineUuid(CommandSender sender, String name, Consumer<UUID> callback) {
+        Player online = Bukkit.getPlayerExact(name);
+        if (online != null) {
+            callback.accept(online.getUniqueId());
+            return;
+        }
+        OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name);
+        if (cached != null) {
+            callback.accept(cached.getUniqueId());
+            return;
+        }
+        Text.send(sender, "<gray>Looking up player profile asynchronously...");
+        CompletableFuture.supplyAsync(() -> Bukkit.getOfflinePlayer(name).getUniqueId())
+            .whenComplete((uuid, failure) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                if (failure != null) {
+                    plugin.getLogger().warning("Offline player lookup failed for '" + name + "': "
+                        + failure.getMessage());
+                    Text.send(sender, "<red>Could not resolve that player name.");
+                } else {
+                    callback.accept(uuid);
+                }
+            }));
+    }
+
     private void handleReplay(CommandSender sender, String[] args) {
         if (!(sender instanceof Player staff)) { Text.send(sender, "<red>Players only."); return; }
         var replay = plugin.getModule("replay").filter(m -> m instanceof ReplayModule).map(m -> (ReplayModule) m);
@@ -340,22 +394,25 @@ public final class LegendaryAcCommand implements CommandExecutor, TabCompleter {
             case "stop" -> replay.get().getPlaybackManager().stop(staff);
             case "list" -> {
                 if (args.length < 3) { Text.send(sender, "<red>Usage: /legendaryac replay list <player>"); return; }
-                OfflinePlayer target = Bukkit.getOfflinePlayer(args[2]);
-                List<ReplayClip> clips = replay.get().getClips(target.getUniqueId());
-                Text.send(sender, "<gray>" + clips.size() + " saved clip(s):");
-                for (int i = 0; i < clips.size(); i++) {
-                    Text.send(sender, "<gray>[" + i + "] <white>" + clips.get(i).triggeringCheck);
-                }
+                resolveOfflineUuid(sender, args[2], uuid -> {
+                    List<ReplayClip> clips = replay.get().getClips(uuid);
+                    Text.send(sender, "<gray>" + clips.size() + " saved clip(s):");
+                    for (int i = 0; i < clips.size(); i++) {
+                        sender.sendMessage(Component.text("[" + i + "] " + clips.get(i).triggeringCheck));
+                    }
+                });
             }
             case "watch" -> {
                 if (args.length < 4) { Text.send(sender, "<red>Usage: /legendaryac replay watch <player> <index>"); return; }
-                OfflinePlayer target = Bukkit.getOfflinePlayer(args[2]);
-                List<ReplayClip> clips = replay.get().getClips(target.getUniqueId());
                 try {
                     int idx = Integer.parseInt(args[3]);
-                    if (idx < 0 || idx >= clips.size()) { Text.send(sender, "<red>Invalid clip index."); return; }
-                    replay.get().getPlaybackManager().watch(staff, clips.get(idx));
-                    Text.send(sender, "<green>Watching clip " + idx + ". Use /legendaryac replay stop to return.");
+                    if (idx < 0) { Text.send(sender, "<red>Invalid clip index."); return; }
+                    resolveOfflineUuid(sender, args[2], uuid -> {
+                        List<ReplayClip> clips = replay.get().getClips(uuid);
+                        if (idx >= clips.size()) { Text.send(sender, "<red>Invalid clip index."); return; }
+                        replay.get().getPlaybackManager().watch(staff, clips.get(idx));
+                        Text.send(sender, "<green>Watching clip " + idx + ". Use /legendaryac replay stop to return.");
+                    });
                 } catch (NumberFormatException e) {
                     Text.send(sender, "<red>Index must be a number.");
                 }

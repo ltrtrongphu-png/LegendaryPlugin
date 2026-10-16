@@ -203,9 +203,10 @@ public final class AnticheatModule implements Module {
         plugin.getLogger().info("Anti-cheat profile: " + checkProfile.getActivePreset().getConfigName()
             + " (weight x" + checkProfile.getWeightMultiplier() + ")");
         if (plugin.getConfig().getBoolean("anticheat.bungee-sync.enabled", false)) {
-            bungeeIntegration.register();
-            banExecutor.setBungeeIntegration(bungeeIntegration);
-            plugin.getLogger().info("Bungee/Velocity ban-sync enabled.");
+            if (bungeeIntegration.register()) {
+                banExecutor.setBungeeIntegration(bungeeIntegration);
+                plugin.getLogger().info("Authenticated Bungee/Velocity ban-sync enabled.");
+            }
         }
         Bukkit.getPluginManager().registerEvents(watchManager, plugin);
         tpsMonitor.loadConfigValues();

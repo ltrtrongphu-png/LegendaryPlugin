@@ -1,19 +1,21 @@
 package com.legendary.plugin.modules.database;
 
 import com.legendary.plugin.LegendaryPlugin;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Thin async wrapper around a JDBC connection (SQLite by default, MySQL
@@ -28,11 +30,13 @@ import java.util.HashMap;
 public final class DatabaseManager {
 
     private final LegendaryPlugin plugin;
-    private volatile Connection connection;
+    private volatile HikariDataSource dataSource;
     private volatile boolean mysql;
     private final ReentrantLock writeLock = new ReentrantLock();
-    private final ConcurrentLinkedQueue<ViolationRow> pendingViolations = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<ViolationLevelRow> pendingViolationLevels = new ConcurrentLinkedQueue<>();
+    private static final int MAX_PENDING_ROWS = 10_000;
+    private final ArrayBlockingQueue<ViolationRow> pendingViolations = new ArrayBlockingQueue<>(MAX_PENDING_ROWS);
+    private final ArrayBlockingQueue<ViolationLevelRow> pendingViolationLevels = new ArrayBlockingQueue<>(MAX_PENDING_ROWS);
+    private final AtomicLong lastQueueWarning = new AtomicLong();
     private java.util.concurrent.ScheduledExecutorService batchFlushExecutor;
 
     public DatabaseManager(LegendaryPlugin plugin) {
@@ -44,52 +48,70 @@ public final class DatabaseManager {
             try {
                 var cfg = plugin.getConfig();
                 mysql = "mysql".equalsIgnoreCase(cfg.getString("anticheat.database.type", "sqlite"));
+                HikariConfig poolConfig = new HikariConfig();
+                poolConfig.setPoolName("LegendaryPlugin-Database");
+                poolConfig.setMaximumPoolSize(cfg.getInt("anticheat.database.pool-size", 4));
+                poolConfig.setMinimumIdle(1);
+                poolConfig.setConnectionTimeout(5_000L);
                 if (mysql) {
                     String host = cfg.getString("anticheat.database.mysql.host", "localhost");
                     int port = cfg.getInt("anticheat.database.mysql.port", 3306);
                     String database = cfg.getString("anticheat.database.mysql.database", "legendary");
                     String user = cfg.getString("anticheat.database.mysql.username", "root");
-                    String password = cfg.getString("anticheat.database.mysql.password", "");
-                    String url = "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&autoReconnect=true&rewriteBatchedStatements=true";
-                    connection = DriverManager.getConnection(url, user, password);
+                    String password = System.getenv().getOrDefault("LEGENDARY_DB_PASSWORD",
+                        cfg.getString("anticheat.database.mysql.password", ""));
+                    boolean useSsl = cfg.getBoolean("anticheat.database.mysql.use-ssl", true);
+                    String url = "jdbc:mysql://" + host + ":" + port + "/" + database
+                        + "?useSSL=" + useSsl + "&autoReconnect=true&rewriteBatchedStatements=true";
+                    poolConfig.setJdbcUrl(url);
+                    poolConfig.setUsername(user);
+                    poolConfig.setPassword(password);
                 } else {
                     File dbFile = new File(plugin.getDataFolder(), cfg.getString("anticheat.database.file-name", "legendary.db"));
                     plugin.getDataFolder().mkdirs();
-                    try {
-                        Class.forName("org.sqlite.JDBC");
-                    } catch (ClassNotFoundException ignored) {}
-                    connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
-                    try (Statement pragma = connection.createStatement()) {
+                    poolConfig.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+                    poolConfig.setMaximumPoolSize(1);
+                    dataSource = new HikariDataSource(poolConfig);
+                    try (Connection connection = dataSource.getConnection();
+                         Statement pragma = connection.createStatement()) {
                         pragma.execute("PRAGMA journal_mode=WAL");
                         pragma.execute("PRAGMA synchronous=NORMAL");
                         pragma.execute("PRAGMA cache_size=-64000");
                     }
                 }
+                if (mysql) dataSource = new HikariDataSource(poolConfig);
                 createSchema();
                 startBatchFlush();
                 plugin.getServer().getScheduler().runTask(plugin, onReady);
-            } catch (SQLException e) {
+            } catch (SQLException | RuntimeException e) {
+                HikariDataSource failedPool = dataSource;
+                dataSource = null;
+                if (failedPool != null) failedPool.close();
                 plugin.getLogger().severe("Database connection failed: " + e.getMessage());
             }
         });
     }
 
     private void createSchema() throws SQLException {
-        try (Statement statement = connection.createStatement()) {
+        HikariDataSource source = dataSource;
+        if (source == null) throw new SQLException("Database pool is not initialized");
+        String idDefinition = mysql ? "BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+        try (Connection connection = source.getConnection(); Statement statement = connection.createStatement()) {
             statement.execute("""
                 CREATE TABLE IF NOT EXISTS anticheat_bans (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id %s,
                     player_uuid VARCHAR(36) NOT NULL,
                     player_name VARCHAR(32) NOT NULL,
                     check_name VARCHAR(64) NOT NULL,
                     vl DOUBLE NOT NULL,
                     reason TEXT,
-                    banned_at BIGINT NOT NULL
+                    banned_at BIGINT NOT NULL,
+                    staff_uuid VARCHAR(36)
                 )
-                """);
+                """.formatted(idDefinition));
             statement.execute("""
                 CREATE TABLE IF NOT EXISTS anticheat_violations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id %s,
                     player_uuid VARCHAR(36) NOT NULL,
                     player_name VARCHAR(32) NOT NULL,
                     check_name VARCHAR(64) NOT NULL,
@@ -98,7 +120,7 @@ public final class DatabaseManager {
                     detail TEXT,
                     created_at BIGINT NOT NULL
                 )
-                """);
+                """.formatted(idDefinition));
             statement.execute("""
                 CREATE TABLE IF NOT EXISTS anticheat_violation_levels (
                     player_uuid VARCHAR(36) NOT NULL,
@@ -108,7 +130,35 @@ public final class DatabaseManager {
                     PRIMARY KEY (player_uuid, check_name)
                 )
                 """);
-            statement.execute("CREATE INDEX IF NOT EXISTS idx_violations_player ON anticheat_violations(player_uuid, created_at)");
+            statement.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)");
+            int currentVersion;
+            try (var versions = statement.executeQuery("SELECT version FROM schema_version")) {
+                currentVersion = versions.next() ? versions.getInt(1) : 0;
+            }
+            if (currentVersion == 0) statement.executeUpdate("INSERT INTO schema_version (version) VALUES (0)");
+            if (currentVersion < 2) {
+                ensureStaffUuidColumn(statement);
+                statement.executeUpdate("UPDATE schema_version SET version = 2");
+            }
+            try {
+                statement.execute(mysql
+                    ? "CREATE INDEX idx_violations_player ON anticheat_violations(player_uuid, created_at)"
+                    : "CREATE INDEX IF NOT EXISTS idx_violations_player ON anticheat_violations(player_uuid, created_at)");
+            } catch (SQLException exception) {
+                if (!mysql || exception.getErrorCode() != 1061) throw exception;
+            }
+        }
+    }
+
+    private void ensureStaffUuidColumn(Statement statement) throws SQLException {
+        try {
+            statement.execute("ALTER TABLE anticheat_bans ADD COLUMN staff_uuid VARCHAR(36)");
+        } catch (SQLException exception) {
+            String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
+            boolean alreadyPresent = mysql
+                ? exception.getErrorCode() == 1060
+                : message.contains("duplicate column name");
+            if (!alreadyPresent) throw exception;
         }
     }
 
@@ -118,20 +168,38 @@ public final class DatabaseManager {
 
     /** Queues a violation for batch insert. Non-blocking, always off the main thread. */
     public void recordViolationAsync(String uuid, String name, String check, double weight, double vlAfter, String detail) {
-        pendingViolations.add(new ViolationRow(uuid, name, check, weight, vlAfter, detail, System.currentTimeMillis()));
+        if (!pendingViolations.offer(new ViolationRow(uuid, name, check, weight, vlAfter, detail, System.currentTimeMillis()))) {
+            warnQueueFull("violation");
+        }
     }
 
     public void saveViolationLevelAsync(String uuid, String check, double vl) {
-        pendingViolationLevels.add(new ViolationLevelRow(uuid, check, vl, System.currentTimeMillis()));
+        if (!pendingViolationLevels.offer(new ViolationLevelRow(uuid, check, vl, System.currentTimeMillis()))) {
+            warnQueueFull("violation-level");
+        }
+    }
+
+    private void warnQueueFull(String queueName) {
+        long now = System.currentTimeMillis();
+        long previous = lastQueueWarning.get();
+        if (now - previous >= 10_000L && lastQueueWarning.compareAndSet(previous, now)) {
+            plugin.getLogger().severe("Anticheat " + queueName
+                + " persistence queue reached its limit; new rows are being rejected.");
+        }
     }
 
     public void loadViolationLevelsAsync(String uuid, Consumer<Map<String, Double>> callback) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             Map<String, Double> levels = new HashMap<>();
-            Connection c = connection;
-            if (c == null) return;
+            HikariDataSource source = dataSource;
+            if (source == null || source.isClosed()) {
+                plugin.getLogger().warning("Cannot load violation levels: database is not connected.");
+                plugin.getServer().getScheduler().runTask(plugin, () -> callback.accept(Map.of()));
+                return;
+            }
             writeLock.lock();
-            try (var stmt = c.prepareStatement(
+            try (Connection connection = source.getConnection();
+                 var stmt = connection.prepareStatement(
                     "SELECT check_name, vl FROM anticheat_violation_levels WHERE player_uuid = ?")) {
                 stmt.setString(1, uuid);
                 try (var rs = stmt.executeQuery()) {
@@ -157,8 +225,8 @@ public final class DatabaseManager {
 
     private void flushViolations() {
         if (pendingViolations.isEmpty() && pendingViolationLevels.isEmpty()) return;
-        Connection c = connection;
-        if (c == null) return;
+        HikariDataSource source = dataSource;
+        if (source == null || source.isClosed()) return;
         List<ViolationRow> batch = new ArrayList<>(128);
         List<ViolationLevelRow> levelBatch = new ArrayList<>(128);
         ViolationRow row;
@@ -168,8 +236,8 @@ public final class DatabaseManager {
         if (batch.isEmpty() && levelBatch.isEmpty()) return;
 
         writeLock.lock();
-        try {
-            try (var stmt = c.prepareStatement(
+        try (Connection connection = source.getConnection()) {
+            try (var stmt = connection.prepareStatement(
                     "INSERT INTO anticheat_violations (player_uuid, player_name, check_name, weight, vl_after, detail, created_at) VALUES (?,?,?,?,?,?,?)")) {
                 for (ViolationRow r : batch) {
                     stmt.setString(1, r.uuid());
@@ -183,9 +251,9 @@ public final class DatabaseManager {
                 }
                 stmt.executeBatch();
             }
-            try (var update = c.prepareStatement(
+            try (var update = connection.prepareStatement(
                     "UPDATE anticheat_violation_levels SET vl = ?, updated_at = ? WHERE player_uuid = ? AND check_name = ?");
-                 var insert = c.prepareStatement(
+                 var insert = connection.prepareStatement(
                     "INSERT INTO anticheat_violation_levels (vl, updated_at, player_uuid, check_name) VALUES (?,?,?,?)")) {
                 for (ViolationLevelRow r : levelBatch) {
                     update.setDouble(1, r.vl());
@@ -203,6 +271,12 @@ public final class DatabaseManager {
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("Failed to flush anticheat data: " + e.getMessage());
+            batch.forEach(violation -> {
+                if (!pendingViolations.offer(violation)) warnQueueFull("violation");
+            });
+            levelBatch.forEach(level -> {
+                if (!pendingViolationLevels.offer(level)) warnQueueFull("violation-level");
+            });
         } finally {
             writeLock.unlock();
         }
@@ -211,12 +285,12 @@ public final class DatabaseManager {
     public void getRecentViolationsAsync(String uuid, int limit, Consumer<List<ViolationRecord>> callback) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             List<ViolationRecord> results = new ArrayList<>();
-            Connection c = connection;
-            if (c != null) {
+            HikariDataSource source = dataSource;
+            if (source != null && !source.isClosed()) {
                 String sql = "SELECT player_name, check_name, weight, vl_after, detail, created_at FROM anticheat_violations "
                     + "WHERE player_uuid = ? ORDER BY created_at DESC LIMIT ?";
                 writeLock.lock();
-                try (var stmt = c.prepareStatement(sql)) {
+                try (Connection connection = source.getConnection(); var stmt = connection.prepareStatement(sql)) {
                     stmt.setString(1, uuid);
                     stmt.setInt(2, limit);
                     try (var rs = stmt.executeQuery()) {
@@ -237,22 +311,36 @@ public final class DatabaseManager {
         });
     }
 
-    public boolean isConnected() { return connection != null; }
-    public Connection getConnection() { return connection; }
+    public boolean isConnected() { return dataSource != null && !dataSource.isClosed(); }
+    public Connection getConnection() throws SQLException {
+        HikariDataSource source = dataSource;
+        if (source == null || source.isClosed()) throw new SQLException("Database is not connected");
+        return source.getConnection();
+    }
 
     public void recordBanAsync(String uuid, String name, String check, double vl, String reason) {
+        recordBanAuditAsync(null, uuid, name, check, vl, reason);
+    }
+
+    public void recordBanAuditAsync(String staffUuid, String uuid, String name, String check,
+                                    double vl, String reason) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            Connection c = connection;
-            if (c == null) return;
-            String sql = "INSERT INTO anticheat_bans (player_uuid, player_name, check_name, vl, reason, banned_at) VALUES (?,?,?,?,?,?)";
+            HikariDataSource source = dataSource;
+            if (source == null || source.isClosed()) {
+                plugin.getLogger().warning("Cannot record ban audit: database is not connected.");
+                return;
+            }
+            String sql = "INSERT INTO anticheat_bans "
+                + "(player_uuid, player_name, check_name, vl, reason, banned_at, staff_uuid) VALUES (?,?,?,?,?,?,?)";
             writeLock.lock();
-            try (var stmt = c.prepareStatement(sql)) {
+            try (Connection connection = source.getConnection(); var stmt = connection.prepareStatement(sql)) {
                 stmt.setString(1, uuid);
                 stmt.setString(2, name);
                 stmt.setString(3, check);
                 stmt.setDouble(4, vl);
                 stmt.setString(5, reason);
                 stmt.setLong(6, System.currentTimeMillis());
+                stmt.setString(7, staffUuid);
                 stmt.executeUpdate();
             } catch (SQLException e) {
                 plugin.getLogger().warning("Failed to record ban: " + e.getMessage());
@@ -268,10 +356,10 @@ public final class DatabaseManager {
             batchFlushExecutor.shutdownNow();
             batchFlushExecutor = null;
         }
-        Connection c = connection;
-        connection = null;
-        if (c != null) {
-            try { c.close(); } catch (SQLException ignored) {}
+        HikariDataSource source = dataSource;
+        dataSource = null;
+        if (source != null) {
+            source.close();
         }
     }
 }

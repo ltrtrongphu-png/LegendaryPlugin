@@ -28,25 +28,22 @@ modules:
   verification: true
   replay: true
 
-# ---- Anti Reverse-Engineering ----------------------------------
-# Protects the plugin's bytecode from decompilation/tampering.
-# Detects JVM debuggers/profilers, class bytecode modifications at
-# runtime, and external plugins reflecting into internal packages.
-# When tampering is detected, enters lockdown mode: anti-cheat checks
-# are disabled so an attacker can't test bypasses on a modified plugin.
+# ---- Integrity Check -------------------------------------------
+# Reports instrumentation flags and detects changes to the plugin JAR on disk.
+# This does not prevent decompilation or detect in-memory bytecode modification.
 anti-reverse-engineering:
   debugger-detection:
     enabled: true
+    # Match exact JVM argument prefixes to suppress known monitoring agents.
+    whitelisted-flag-prefixes: []
   class-tampering-check:
     enabled: true
     interval-ticks: 600
-  plugin-scan:
-    enabled: true
-  lockdown-on-tampering: true
+  lockdown-on-tampering: false
 
 # ---- Anti-DDoS Protection --------------------------------------
-# Application-layer DDoS protection for self-hosted servers without
-# a proxy/CDN front. Enforces global and per-IP connection rate
+# Application-layer login-flood protection only; it does not replace a
+# firewall, DDoS provider, or L4 protection. Enforces global and per-IP connection rate
 # limits, auto-blacklists flooding IPs, and provides an emergency
 # lockdown mode that only allows whitelisted IPs to join during
 # active attacks.
@@ -59,9 +56,11 @@ anti-ddos:
   blacklist-duration-ms: 900000
   auto-blacklist:
     enabled: true
+  # Configure trusted proxy ingress CIDRs. Proxy IPs are never auto-blacklisted.
+  trusted-proxies: []
   whitelist-ips: []
-  # Emergency lockdown: when active, only players from whitelisted IPs
-  # or with legendary.bypass.ddos permission can join. Toggle via
+  whitelist-uuids: []
+  # Emergency lockdown: only UUIDs/IPs in the allowlists can join. Toggle via
   # /legendaryac lockdown <on|off>.
 
 # ---- ESP / Anti-X-ray protection ------------------------------
@@ -408,18 +407,21 @@ anticheat:
     # they happen. Requires at least one player online to relay through. Leave off for a
     # single, non-networked server.
     enabled: false
+    # Required when sync is enabled. Set the same random value on every server,
+    # or provide it using LEGENDARY_BUNGEE_SYNC_SECRET. Minimum 32 UTF-8 bytes.
+    secret: ""
   database:
     type: sqlite
     file-name: legendary.db
-    # SQLite performance PRAGMAs applied automatically: WAL mode, NORMAL synchronous,
-    # 64MB cache. For MySQL, rewriteBatchedStatements=true is added to the JDBC URL.
-    # Violations are batch-inserted every 5 seconds to reduce disk I/O during bursts.
+    # SQLite PRAGMAs are applied automatically. MySQL passwords can be supplied
+    # through LEGENDARY_DB_PASSWORD instead of storing credentials in this file.
     mysql:
       host: localhost
       port: 3306
       database: legendary
       username: root
       password: ""
+      use-ssl: true
 
 # ---- Chunk density advisory -------------------------------------
 # Reports unusually dense loaded chunks when players enter them; never blocks

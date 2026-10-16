@@ -32,7 +32,7 @@ You may NOT:
 | SmartOptimizer      | `optimization` — TPS-adaptive view/sim distance, mob caps, item/XP-orb merging, redstone throttling, join-ramp, TPS history, Discord alerts |
 | BaB                 | `anticheat` — 45 detection checks with composite heuristic fusion engine, violations/escalation/bans, alerts, TPS compensation, raid alerts, anti-spam, client-brand check, threat dashboard, lockout system<br>`verification` — join-limbo anti-bot<br>`replay` — rolling movement buffer + staff playback |
 | Safety utilities    | `anti-infinite-water` — optional local water-bucket rate limit only; `anti-chunk-ban` — advisory density reports only |
-| **New in v2.0.0**   | `anti-reverse-engineering` — JVM debugger detection, class bytecode tampering checks, external plugin reflection scan, lockdown mode<br>`anti-ddos` — global/per-IP connection rate limiting, auto-blacklist, emergency lockdown for self-hosted servers |
+| **New in v2.0.0**   | `anti-reverse-engineering` — JVM instrumentation warnings and on-disk plugin JAR integrity monitoring (not an anti-decompilation system)<br>`anti-ddos` — application-layer login-flood controls; does not replace firewall or L4 protection |
 
 **Safe defaults:** automatic entity clearing, chunk-density blocking, water-source
 interference, hopper-transfer throttling, chunk-unload optimizers, and block
@@ -200,28 +200,25 @@ give a 100% guarantee equivalent to compiling against the actual jars.
 - Simulation test suite updated to reflect VL persistence model.
 
 **v1.8.0** (2026-10-03) — security modules:
-- **Anti Reverse-Engineering** module (`modules.anti-reverse-engineering`):
-  - Detects JVM debuggers/profilers via `ManagementFactory.getRuntimeMXBean()`
-    input arguments (flags: `-agentlib`, `-Xrunhprof`, `-javaagent`,
-    `-Xdebug`, `-agentpath`, `-Xrunjdwp`).
-  - Computes SHA-256 hashes of critical class bytecode at startup and
-    verifies them periodically to detect runtime class tampering.
-  - Scans external plugins on `PluginEnableEvent` for reflection into
-    internal `com.legendary.plugin` packages.
-  - **Lockdown mode**: if tampering or a debugger is detected, the
-    anti-cheat module is automatically disabled so an attacker can't
-    test bypasses on a modified plugin. Anti-DDoS stays active.
-  - Staff alerts via `legendary.security.alerts` permission.
+- **Integrity Check** (`modules.anti-reverse-engineering`) reports configured JVM
+  instrumentation flags and detects changes to the plugin JAR on disk after startup.
+  It cannot prevent decompilation or detect in-memory class instrumentation.
+  JVM flags only produce warnings. Lockdown is opt-in with
+  `anti-reverse-engineering.lockdown-on-tampering: true`; administrators with
+  `legendary.security.unlock` can clear an active lockdown using
+  `/legendaryac security unlock`.
 - **Anti-DDoS** module (`modules.anti-ddos`):
   - Global login rate limiting (max N logins/second across all IPs).
   - Per-IP login rate limiting (max N logins/minute per IP).
   - Per-IP concurrent connection cap.
   - Auto-blacklist: IPs that exceed violation threshold are temporarily
     blacklisted for a configurable duration (default 15 minutes).
-  - Emergency lockdown mode (`/legendaryac lockdown on|off`): only
-    whitelisted IPs or players with `legendary.bypass.ddos` can join.
-  - IP whitelist for trusted networks.
-  - Cleanup task prunes expired blacklist entries and stale connections.
+  - Emergency lockdown mode (`/legendaryac lockdown on|off`) uses configured
+    IP/UUID allowlists; login-stage permissions are not trusted.
+  - Trusted proxy CIDRs bypass IP blacklisting; configure proxy forwarding at
+    the platform boundary to provide reliable client addresses.
+  - Application-layer filtering cannot absorb network-layer floods. Use a
+    firewall or DDoS-protection provider for L3/L4 attacks.
 - `/legendaryac security` — live security status dashboard showing
   both modules' state (debugger/tampering/lockdown/blacklist counts).
 - `/legendaryac lockdown on|off` — toggle emergency DDoS lockdown.

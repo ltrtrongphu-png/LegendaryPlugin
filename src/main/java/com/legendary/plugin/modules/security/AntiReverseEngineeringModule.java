@@ -21,7 +21,7 @@ public final class AntiReverseEngineeringModule implements Module {
     }
 
     @Override public String id() { return "anti-reverse-engineering"; }
-    @Override public String displayName() { return "Anti Reverse-Engineering"; }
+    @Override public String displayName() { return "Integrity Check"; }
     @Override public int priority() { return 5; }
     @Override public boolean isEnabled() { return enabled; }
 

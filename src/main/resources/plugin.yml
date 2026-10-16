@@ -83,7 +83,10 @@ permissions:
     description: Release a player frozen by the anti-cheat lockout system.
     default: op
   legendary.security.alerts:
-    description: Receive security alerts for reverse-engineering and DDoS attempts.
+    description: Receive integrity-check and DDoS security alerts.
+    default: op
+  legendary.security.unlock:
+    description: Manually clear an explicitly configured integrity lockdown.
     default: op
   legendary.bypass.ddos:
     description: Bypass DDoS emergency lockdown to join the server.
