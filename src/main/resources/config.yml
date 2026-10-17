@@ -2,6 +2,7 @@
 #  LegendaryPlugin - unified configuration
 #  (merged from AntiESPUltimate + SmartOptimizer + BaB)
 # ============================================================
+config-version: 1
 debug: false
 
 general:

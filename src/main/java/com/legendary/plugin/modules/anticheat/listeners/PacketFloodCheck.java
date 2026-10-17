@@ -75,7 +75,7 @@ public final class PacketFloodCheck extends PacketAdapter {
             AtomicInteger counter = counters.get(uuid);
             int count = counter == null ? 0 : counter.getAndSet(0);
             if (!bypass && count > maxPerSecond) {
-                anticheat.flagRaw(player, "packetflood", 1.0, "packets/s=" + count);
+                anticheat.flagRaw(uuid, "packetflood", 1.0, "packets/s=" + count);
             }
         }
         counters.keySet().removeIf(uuid -> Bukkit.getPlayer(uuid) == null);

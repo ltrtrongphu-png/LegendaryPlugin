@@ -40,5 +40,6 @@ public final class FallingBlockLimiter {
         for (int i = 0; i < excess; i++) {
             blocks.get(i).remove();
         }
+        if (excess > 0) plugin.getMetrics().counter("optimization.entities.removed").add(excess);
     }
 }

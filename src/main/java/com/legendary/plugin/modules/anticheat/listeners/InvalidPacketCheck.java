@@ -87,7 +87,7 @@ public final class InvalidPacketCheck extends PacketAdapter {
             AtomicInteger count = invalidCounts.get(uuid);
             int total = count == null ? 0 : count.getAndSet(0);
             if (!bypass && total > 0) {
-                anticheat.flagRaw(player, "invalidpacket", Math.min(4.0, total * 2.0),
+                anticheat.flagRaw(uuid, "invalidpacket", Math.min(4.0, total * 2.0),
                     lastDetails.getOrDefault(uuid, "invalid packet"));
             }
         }

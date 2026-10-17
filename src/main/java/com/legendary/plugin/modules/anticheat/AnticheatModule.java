@@ -2,6 +2,7 @@ package com.legendary.plugin.modules.anticheat;
 
 import com.legendary.plugin.LegendaryPlugin;
 import com.legendary.plugin.core.Module;
+import com.legendary.plugin.core.Sync;
 import com.legendary.plugin.modules.anticheat.checks.*;
 import com.legendary.plugin.modules.anticheat.checks.BadPacketsCheck;
 import com.legendary.plugin.modules.anticheat.checks.FastEatCheck;
@@ -317,11 +318,15 @@ public final class AnticheatModule implements Module {
     }
 
     /** Entry point for packet-level (non-Check-subclass) detectors like InvalidPacketCheck. */
-    public void flagRaw(Player player, String checkId, double weight, String detail) {
-        processFlag(player, checkId, weight, detail);
+    public void flagRaw(java.util.UUID playerId, String checkId, double weight, String detail) {
+        Sync.run(plugin, () -> {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) processFlag(player, checkId, weight, detail);
+        });
     }
 
     private boolean processFlag(Player player, String checkId, double weight, String detail) {
+        Sync.assertMain();
         boolean bypassed = bypassGuard.shouldBypass(player, checkId);
         double effectiveWeight = bypassed
             ? weight * bypassGuard.getBypassVlMultiplier(player) : weight;

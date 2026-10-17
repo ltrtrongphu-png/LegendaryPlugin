@@ -2,6 +2,7 @@ name: LegendaryPlugin
 version: '${project.version}'
 main: com.legendary.plugin.LegendaryPlugin
 api-version: '1.21'
+folia-supported: false
 author: WhiteBlackMC709
 description: >
   Unified anti-cheat, anti-X-ray/ESP protection, server optimization and
@@ -31,6 +32,7 @@ commands:
       /<command> help
       /<command> status
       /<command> module <list|enable|disable|reload> [module]
+      /<command> config validate
       /<command> gui
       /<command> simulate <mild|moderate|severe|normal>
       /<command> topchunks [world] [limit]

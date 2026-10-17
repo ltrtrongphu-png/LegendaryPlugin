@@ -1,6 +1,7 @@
 package com.legendary.plugin.integrations;
 
 import com.legendary.plugin.LegendaryPlugin;
+import com.legendary.plugin.core.Sync;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -161,12 +162,14 @@ public final class BungeeIntegration implements PluginMessageListener, Listener 
             acceptedNonces.entrySet().removeIf(entry -> now - entry.getValue() > MAX_CLOCK_SKEW_MS);
             if (acceptedNonces.size() >= 4096 || acceptedNonces.putIfAbsent(nonce, now) != null) return;
             SyncedBan ban = new SyncedBan(uuid, name, reason, expiration(duration));
-            if (pendingBans.size() < 10_000 || pendingBans.containsKey(uuid)) {
-                pendingBans.put(uuid, ban);
-            }
-            Player local = Bukkit.getPlayer(uuid);
-            if (local != null) applyBan(local, ban);
-            plugin.getLogger().info("[BungeeSync] Authenticated ban received for " + name + ".");
+            Sync.run(plugin, () -> {
+                if (pendingBans.size() < 10_000 || pendingBans.containsKey(uuid)) {
+                    pendingBans.put(uuid, ban);
+                }
+                Player local = Bukkit.getPlayer(uuid);
+                if (local != null) applyBan(local, ban);
+                plugin.getLogger().info("[BungeeSync] Authenticated ban received for " + name + ".");
+            });
         } catch (java.io.IOException | GeneralSecurityException | RuntimeException exception) {
             plugin.getLogger().log(Level.WARNING, "Rejected malformed Bungee ban-sync message.", exception);
         }
@@ -179,6 +182,7 @@ public final class BungeeIntegration implements PluginMessageListener, Listener 
     }
 
     private void applyBan(Player player, SyncedBan ban) {
+        Sync.assertMain();
         pendingBans.remove(ban.uuid());
         try {
             player.ban(ban.reason(), ban.expiresAt(), "LegendaryPlugin Bungee sync");

@@ -8,6 +8,8 @@ import com.legendary.plugin.core.ModuleManager;
 import com.legendary.plugin.core.JoinSpawnFallback;
 import com.legendary.plugin.core.PluginMetrics;
 import com.legendary.plugin.core.StartupBanner;
+import com.legendary.plugin.core.ConfigMigrator;
+import com.legendary.plugin.core.ConfigValidator;
 import com.legendary.plugin.gui.LegendaryGuiListener;
 import com.legendary.plugin.integrations.LegendaryPlaceholders;
 import com.legendary.plugin.modules.anticheat.AnticheatModule;
@@ -24,6 +26,8 @@ import com.legendary.plugin.util.GeyserExemption;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -47,12 +51,19 @@ public final class LegendaryPlugin extends JavaPlugin {
     private LegendaryGuiListener guiListener;
     private PluginMetrics metrics;
     private LanguageManager languageManager;
+    private ConfigValidator.Result configValidation;
     private boolean debug;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        int previousConfigVersion = ConfigMigrator.migrate(getConfig());
+        if (previousConfigVersion >= 0 && previousConfigVersion < ConfigMigrator.CURRENT_VERSION) {
+            saveConfig();
+            getLogger().info("Migrated configuration from version " + previousConfigVersion
+                + " to " + ConfigMigrator.CURRENT_VERSION + ".");
+        }
         debug = getConfig().getBoolean("debug", false);
         languageManager = new LanguageManager(this);
         languageManager.load();
@@ -76,6 +87,7 @@ public final class LegendaryPlugin extends JavaPlugin {
         moduleManager.register(new VerificationModule(this));
         moduleManager.register(new ReplayModule(this));
         moduleManager.register(new AnticheatModule(this));
+        validateConfiguration();
         moduleManager.enableAll();
 
         guiListener = new LegendaryGuiListener(this);
@@ -136,6 +148,46 @@ public final class LegendaryPlugin extends JavaPlugin {
 
     public Optional<Module> getModule(String id) {
         return moduleManager.get(id);
+    }
+
+    public ConfigValidator.Result validateConfiguration() {
+        try (var resource = getResource("config.yml")) {
+            if (resource == null) {
+                throw new IllegalStateException("Bundled config.yml is missing.");
+            }
+            var defaults = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new InputStreamReader(resource, StandardCharsets.UTF_8));
+            configValidation = ConfigValidator.validate(getConfig(), defaults,
+                name -> Bukkit.getPluginManager().getPlugin(name) != null);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Failed to read bundled config.yml.", exception);
+        }
+
+        for (Module module : moduleManager.all().values()) {
+            moduleManager.clearBlock(module.id());
+        }
+        boolean hasGlobalError = false;
+        for (ConfigValidator.Issue issue : configValidation.issues()) {
+            String message = "[Config " + issue.severity() + "] " + issue.path() + ": " + issue.message();
+            if (issue.severity() == ConfigValidator.Severity.ERROR) {
+                getLogger().severe(message);
+                if (issue.moduleId() == null) hasGlobalError = true;
+                else moduleManager.block(issue.moduleId(), message);
+            } else {
+                getLogger().warning(message);
+            }
+        }
+        if (hasGlobalError) {
+            moduleManager.disableAll();
+            for (Module module : moduleManager.all().values()) {
+                moduleManager.block(module.id(), "Global configuration validation failed.");
+            }
+        }
+        return configValidation;
+    }
+
+    public ConfigValidator.Result getConfigValidation() {
+        return configValidation;
     }
 
     /** Convenience typed accessor used by checks that always expect anticheat to exist. */

@@ -113,7 +113,7 @@ public final class DisablerCheck extends PacketAdapter {
             if (now - sentAt > rttThresholdMs) {
                 int missed = missedTransactions.merge(uuid, 1, Integer::sum);
                 if (missed >= requiredMissedToFlag) {
-                    anticheat.flagRaw(player, "disabler", 2.0,
+                    anticheat.flagRaw(uuid, "disabler", 2.0,
                         "missedTransactions=" + missed + " rttExceeded=" + (now - sentAt) + "ms");
                     missedTransactions.put(uuid, 0);
                 }
@@ -157,7 +157,7 @@ public final class DisablerCheck extends PacketAdapter {
             bypassCache.put(uuid, bypass);
             int wrong = wrongIdTransactions.getOrDefault(uuid, 0);
             if (!bypass && wrong >= requiredWrongIdToFlag) {
-                anticheat.flagRaw(player, "disabler", 2.0, "wrongTransactionResponses=" + wrong);
+                anticheat.flagRaw(uuid, "disabler", 2.0, "wrongTransactionResponses=" + wrong);
                 wrongIdTransactions.put(uuid, 0);
             }
         }

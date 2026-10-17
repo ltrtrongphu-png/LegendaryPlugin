@@ -154,6 +154,7 @@ public final class ClearEntitiesTask implements Listener {
                     Text.send(trigger, "<green>Cleared <white>" + cleared[0] + "<green> entities.");
                 }
                 plugin.getLogger().info("[Optimization] Cleared " + cleared[0] + " entities (level=" + currentLevel + ")");
+                plugin.getMetrics().counter("optimization.entities.removed").add(cleared[0]);
                 running.set(false);
             }
         }, 0L, 1L);

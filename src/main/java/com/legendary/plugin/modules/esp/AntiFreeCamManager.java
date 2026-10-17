@@ -76,7 +76,7 @@ public final class AntiFreeCamManager implements Listener {
                     .filter(m -> m instanceof com.legendary.plugin.modules.anticheat.AnticheatModule)
                     .map(m -> (com.legendary.plugin.modules.anticheat.AnticheatModule) m)
                     .ifPresentOrElse(
-                        anticheat -> anticheat.flagRaw(player, "freecam", 2.0, detail),
+                        anticheat -> anticheat.flagRaw(player.getUniqueId(), "freecam", 2.0, detail),
                         () -> plugin.getLogger().warning("[AntiFreeCam] " + player.getName() + " " + detail
                             + " - possible free-cam ESP (anticheat module disabled, alert not escalated).")
                     );

@@ -79,6 +79,7 @@ public final class ProjectileCleaner {
         }
         if (removed.get() > 0) {
             plugin.getMetrics().counter("optimization.projectiles.cleaned").add(removed.get());
+            plugin.getMetrics().counter("optimization.entities.removed").add(removed.get());
         }
     }
 

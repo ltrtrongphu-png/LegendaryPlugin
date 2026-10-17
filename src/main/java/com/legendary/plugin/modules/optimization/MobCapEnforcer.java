@@ -42,6 +42,7 @@ public final class MobCapEnforcer {
         for (int i = 0; i < excess; i++) {
             monsters.get(i).remove();
         }
+        if (excess > 0) plugin.getMetrics().counter("optimization.entities.removed").add(excess);
     }
 
     public boolean isProtected(LivingEntity entity) {

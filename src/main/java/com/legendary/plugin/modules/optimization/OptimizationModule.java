@@ -259,7 +259,11 @@ public final class OptimizationModule implements Module {
             notifyAdmins(currentLevel, newLevel, tps);
             if (discordNotifier != null) discordNotifier.notifyLevelChange(currentLevel, newLevel, tps);
         }
-        if (newLevel != currentLevel) lastLevelChangeAt = System.currentTimeMillis();
+        if (newLevel != currentLevel) {
+            lastLevelChangeAt = System.currentTimeMillis();
+            plugin.getMetrics().counter("optimization.level-changes").increment();
+            plugin.getMetrics().gauge("optimization.level.last-change-epoch-ms").set(lastLevelChangeAt);
+        }
         currentLevel = newLevel;
 
         if (adaptiveInterval && !simulationOverride) {

@@ -41,6 +41,7 @@ public final class ArmorStandLimiter {
         for (int i = 0; i < excess; i++) {
             stands.get(i).remove();
         }
+        if (excess > 0) plugin.getMetrics().counter("optimization.entities.removed").add(excess);
     }
 
     public boolean isUnprotected(ArmorStand stand) {

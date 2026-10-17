@@ -2,6 +2,9 @@ package com.legendary.plugin.commands;
 
 import com.legendary.plugin.LegendaryPlugin;
 import com.legendary.plugin.core.Module;
+import com.legendary.plugin.core.ModuleManager;
+import com.legendary.plugin.modules.anticheat.AnticheatModule;
+import com.legendary.plugin.core.ConfigValidator;
 import com.legendary.plugin.gui.LegendaryGuiListener;
 import com.legendary.plugin.modules.anticheat.AnticheatModule;
 import com.legendary.plugin.modules.anticheat.Check;
@@ -53,6 +56,7 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
             case "topchunks" -> handleTopChunks(sender, args);
             case "history" -> handleHistory(sender);
             case "report" -> handleReport(sender);
+            case "config" -> handleConfig(sender, args);
             default -> Text.send(sender, "<red>Unknown subcommand. Use /legendary help.");
         }
         return true;
@@ -64,7 +68,7 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
             "/legendary status", "/legendary module <list|enable|disable|reload> [module]",
             "/legendary gui", "/legendary simulate <mild|moderate|severe|normal>",
             "/legendary topchunks [world] [limit]", "/legendary history",
-            "/legendary report")) {
+            "/legendary report", "/legendary config validate")) {
             Text.send(sender, "<gray> - <white>" + line);
         }
     }
@@ -72,8 +76,11 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
     private void sendStatus(CommandSender sender) {
         Text.send(sender, "<gray>== <white>LegendaryPlugin Status</white> ==");
         for (Module module : plugin.getModuleManager().all().values()) {
-            Text.send(sender, (module.isEnabled() ? "<green>● " : "<red>● ") + "<white>"
-                + module.displayName() + " <gray>(" + module.id() + ")");
+            var state = plugin.getModuleManager().state(module.id());
+            String color = state == ModuleManager.State.ENABLED ? "<green>"
+                : state == ModuleManager.State.FAILED || state == ModuleManager.State.BLOCKED ? "<red>" : "<yellow>";
+            Text.send(sender, color + "● <white>" + module.displayName()
+                + " <gray>(" + module.id() + ", " + state + ")");
         }
         plugin.getModule("optimization").filter(m -> m instanceof OptimizationModule)
             .map(m -> (OptimizationModule) m)
@@ -105,7 +112,8 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
             case "reload" -> {
                 if (args.length < 3) { Text.send(sender, "<red>Usage: /legendary module reload <module>"); return; }
                 boolean ok = plugin.getModuleManager().reload(args[2]);
-                Text.send(sender, ok ? "<green>Reloaded module '" + args[2] + "'." : "<red>Unknown module.");
+                Text.send(sender, ok ? "<green>Reloaded module '" + args[2] + "'."
+                    : "<red>Could not reload module '" + args[2] + "'. Check its dependencies and configuration.");
             }
             default -> Text.send(sender, "<red>Unknown module action.");
         }
@@ -120,6 +128,27 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
     private void handleGui(CommandSender sender) {
         if (!(sender instanceof Player player)) { Text.send(sender, "<red>Players only."); return; }
         guiListener.open(player);
+    }
+
+    private void handleConfig(CommandSender sender, String[] args) {
+        if (args.length != 2 || !args[1].equalsIgnoreCase("validate")) {
+            Text.send(sender, "<red>Usage: /legendary config validate");
+            return;
+        }
+        plugin.reloadConfig();
+        ConfigValidator.Result result = plugin.validateConfiguration();
+        Text.send(sender, result.isValid()
+            ? "<green>Configuration is valid."
+            : "<red>Configuration has errors; affected modules are blocked.");
+        if (result.issues().isEmpty()) {
+            Text.send(sender, "<gray>No warnings or errors.");
+            return;
+        }
+        for (ConfigValidator.Issue issue : result.issues()) {
+            String color = issue.severity() == ConfigValidator.Severity.ERROR ? "<red>" : "<yellow>";
+            Text.send(sender, color + issue.severity() + " <gray>" + issue.path()
+                + ": <white>" + issue.message());
+        }
     }
 
     private void handleSimulate(CommandSender sender, String[] args) {
@@ -180,7 +209,11 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
 
         Text.send(sender, "<gray>Modules:");
         for (Module module : plugin.getModuleManager().all().values()) {
-            Text.send(sender, (module.isEnabled() ? "<green>\u25cf " : "<red>\u25cf ") + "<white>" + module.displayName() + " <gray>(" + module.id() + ")");
+            var state = plugin.getModuleManager().state(module.id());
+            String color = state == ModuleManager.State.ENABLED ? "<green>"
+                : state == ModuleManager.State.FAILED || state == ModuleManager.State.BLOCKED ? "<red>" : "<yellow>";
+            Text.send(sender, color + "\u25cf " + "<white>" + module.displayName()
+                + " <gray>(" + module.id() + ", " + state + ")");
         }
 
         plugin.getModule("optimization").filter(m -> m instanceof OptimizationModule)
@@ -224,7 +257,23 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
         Text.send(sender, "<gray>Worlds: <white>" + Bukkit.getWorlds().size());
         Text.send(sender, "<gray>--------------------------------------------");
         Text.send(sender, "<gray>Metrics:");
+        Runtime runtime = Runtime.getRuntime();
+        plugin.getMetrics().gauge("runtime.memory.used-mb")
+            .set((runtime.totalMemory() - runtime.freeMemory()) / (1024.0 * 1024.0));
         Text.send(sender, plugin.getMetrics().formatSummary());
+        long flags = plugin.getMetrics().counter("anticheat.flags.total").get();
+        long bans = plugin.getMetrics().counter("anticheat.bans").get();
+        Text.send(sender, "<gray>Flags per ban: <white>" + (bans == 0 ? "n/a"
+            : String.format("%.2f", (double) flags / bans)));
+        plugin.getModule("anticheat").filter(module -> module instanceof AnticheatModule)
+            .map(module -> (AnticheatModule) module)
+            .ifPresent(anticheat -> {
+                Text.send(sender, "<gray>Check-gate timings (avg ns; shouldSkip only):");
+                for (var snapshot : anticheat.getPerfProfiler().snapshots().stream().limit(5).toList()) {
+                    Text.send(sender, "<gray>- <white>" + snapshot.checkId() + " <gray>avg="
+                        + snapshot.averageNanos() + "ns calls=" + snapshot.calls());
+                }
+            });
         Text.send(sender, "<gray>============================================");
     }
 
@@ -235,7 +284,7 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return filter(args[0], List.of("help", "status", "module", "gui", "simulate", "topchunks", "history", "report"));
+            return filter(args[0], List.of("help", "status", "module", "gui", "simulate", "topchunks", "history", "report", "config"));
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("module")) {
             return filter(args[1], List.of("list", "enable", "disable", "reload"));
@@ -245,6 +294,9 @@ public final class LegendaryCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("simulate")) {
             return filter(args[1], List.of("mild", "moderate", "severe", "normal"));
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("config")) {
+            return filter(args[1], List.of("validate"));
         }
         return List.of();
     }

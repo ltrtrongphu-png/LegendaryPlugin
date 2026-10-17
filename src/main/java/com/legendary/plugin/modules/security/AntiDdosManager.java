@@ -1,6 +1,7 @@
 package com.legendary.plugin.modules.security;
 
 import com.legendary.plugin.LegendaryPlugin;
+import com.legendary.plugin.core.Sync;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -338,11 +339,9 @@ public final class AntiDdosManager implements Listener {
     }
 
     private void notifyStaff(String message) {
-        Runnable notify = () -> Bukkit.getOnlinePlayers().stream()
+        Sync.run(plugin, () -> Bukkit.getOnlinePlayers().stream()
             .filter(p -> p.hasPermission("legendary.security.alerts"))
-            .forEach(p -> com.legendary.plugin.util.Text.send(p, message));
-        if (Bukkit.isPrimaryThread()) notify.run();
-        else if (plugin.isEnabled()) Bukkit.getScheduler().runTask(plugin, notify);
+            .forEach(p -> com.legendary.plugin.util.Text.send(p, message)));
     }
 
     private void releaseReservation(UUID uuid) {

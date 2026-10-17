@@ -72,14 +72,14 @@ public final class PluginMetrics {
     public String formatSummary() {
         StringBuilder sb = new StringBuilder();
         sb.append("\n<gray>--- Plugin Metrics ---\n");
-        for (var entry : counters.entrySet()) {
+        for (var entry : counters.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
             sb.append("<yellow>").append(entry.getKey()).append("<gray>: <white>").append(entry.getValue().get()).append("\n");
         }
-        for (var entry : gauges.entrySet()) {
+        for (var entry : gauges.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
             sb.append("<aqua>").append(entry.getKey()).append("<gray>: <white>")
                 .append(String.format("%.2f", entry.getValue().get())).append("\n");
         }
-        for (var entry : timers.entrySet()) {
+        for (var entry : timers.entrySet().stream().sorted(Map.Entry.comparingByKey()).toList()) {
             sb.append("<gold>").append(entry.getKey()).append("<gray>: <white>")
                 .append(String.format("%.2fms", entry.getValue().getAverageMs()))
                 .append(" (x").append(entry.getValue().getCount()).append(")\n");

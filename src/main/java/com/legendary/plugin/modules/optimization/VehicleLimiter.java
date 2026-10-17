@@ -94,6 +94,7 @@ public final class VehicleLimiter {
         if (removed.get() > 0) {
             plugin.getLogger().info("[Optimization] Removed " + removed.get() + " empty vehicles.");
             plugin.getMetrics().counter("optimization.vehicles.removed").add(removed.get());
+            plugin.getMetrics().counter("optimization.entities.removed").add(removed.get());
         }
     }
 
